@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npx.cmd",
+      "runtimeArgs": ["next", "dev", "--hostname", "0.0.0.0"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

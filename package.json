@@ -1,0 +1,83 @@
+{
+  "name": "product-page-builder",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "electron:dev": "next build && electron .",
+    "electron:build": "next build && electron-builder --win"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "next": "16.2.1",
+    "puppeteer": "^24.40.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "electron": "^41.1.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.productpage.builder",
+    "productName": "상품페이지 빌더",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "public/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone",
+        "filter": ["**/*"]
+      },
+      {
+        "from": ".next/static",
+        "to": "standalone/.next/static",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "public",
+        "to": "standalone/public",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["ko"],
+      "language": "1042",
+      "shortcutName": "상품페이지 빌더",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
