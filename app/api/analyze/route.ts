@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { captureMultipleScreenshots } from "@/lib/screenshot";
 import { analyzeReferences } from "@/lib/claude";
 
+export const maxDuration = 300; // Allow up to 5 minutes (retry time included)
+
 export async function POST(request: NextRequest) {
   try {
     const { urls } = await request.json();
