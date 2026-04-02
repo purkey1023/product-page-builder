@@ -3,7 +3,19 @@ import puppeteer from "puppeteer";
 export async function captureScreenshot(url: string): Promise<string> {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",        // Railway/Docker: /dev/shm 부족 방지 (핵심)
+      "--disable-gpu",
+      "--no-zygote",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-background-timer-throttling",
+      "--disable-renderer-backgrounding",
+      "--disable-backgrounding-occluded-windows",
+    ],
   });
 
   try {

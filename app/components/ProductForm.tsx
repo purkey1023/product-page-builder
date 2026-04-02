@@ -165,14 +165,44 @@ export default function ProductForm({
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || "페이지 생성에 실패했습니다.");
       }
 
-      setGenPercent(100);
-      setTimeout(() => onGenerate(data.html), 500);
+      // SSE 스트림 읽기
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // 완성된 SSE 이벤트 파싱
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.status === "done" && event.html) {
+                setGenPercent(100);
+                setTimeout(() => onGenerate(event.html), 500);
+                return;
+              } else if (event.status === "error") {
+                throw new Error(event.error || "페이지 생성에 실패했습니다.");
+              }
+            } catch (parseErr) {
+              // JSON 파싱 실패는 무시 (keepalive ping 등)
+              if (parseErr instanceof SyntaxError) continue;
+              throw parseErr;
+            }
+          }
+        }
+      }
     } catch (err: unknown) {
       const message =
         err instanceof Error
