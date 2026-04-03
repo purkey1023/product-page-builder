@@ -143,12 +143,8 @@ export default function ProductForm({
       }
       lastApiCallTime = Date.now();
 
-      // base64 이미지를 API에 전송하면 토큰 폭발 → 개수만 전달하고 실제 데이터는 제외
+      // base64 이미지: Claude API에는 개수만 전달, 생성 후 HTML에 마커→실제 이미지 교체
       const imageCount = form.images.length;
-      const imagePlaceholders = Array.from(
-        { length: imageCount },
-        (_, i) => `[상품이미지${i + 1} - 플레이스홀더]`
-      );
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -158,8 +154,8 @@ export default function ProductForm({
           product: {
             ...form,
             features: form.features.filter((f) => f.trim() !== ""),
-            // base64 대신 플레이스홀더 텍스트만 전송
-            images: imagePlaceholders,
+            // 실제 base64 이미지 전달 (Claude에는 안 보내고, HTML 후처리에 사용)
+            images: form.images,
             imageCount,
           },
         }),

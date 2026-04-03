@@ -72,6 +72,7 @@ export interface ProductInfo {
   targetAudience: string;
   tone: "premium" | "casual" | "trustworthy" | "trendy";
   images: string[];
+  imageCount?: number;
 }
 
 /* ─── 분석 결과 압축 (토큰 절약) ─── */
@@ -120,11 +121,20 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
     trendy: "강렬한 컬러 대비, 볼드 타이포, 다이내믹 레이아웃, 밀레니얼 감성",
   }[product.tone];
 
-  const images = (() => {
-    const safe = product.images.filter(i => !i.startsWith("data:"));
-    if (safe.length) return safe.map((u, i) => `img${i + 1}: ${u}`).join(", ");
-    return "이미지 자리에는 외부 URL 사용 금지. 대신 인라인 SVG 그라데이션 배경 사용. 예: <div style='width:100%;aspect-ratio:1;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-card);'><svg width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='#ccc' stroke-width='1'><rect x='3' y='3' width='18' height='18' rx='2'/><circle cx='8.5' cy='8.5' r='1.5'/><path d='M21 15l-5-5L5 21'/></svg></div>";
-  })();
+  const imageCount = product.imageCount ?? product.images.length;
+  const hasImages = imageCount > 0;
+
+  const imageInstruction = hasImages
+    ? `사용자가 ${imageCount}장의 상품 이미지를 업로드했습니다.
+이미지를 아래 마커로 적재적소에 배치하세요 (반드시 <img src="{{PRODUCT_IMG_N}}" /> 형태로):
+- {{PRODUCT_IMG_1}}: ① HERO 섹션 메인 상품 이미지 (가장 크게, width:100%, max-height:500px, object-fit:contain)
+${imageCount >= 2 ? '- {{PRODUCT_IMG_2}}: ④ KEY BENEFITS 또는 ⑥ INGREDIENT 섹션에 상품 디테일 이미지' : ''}
+${imageCount >= 3 ? '- {{PRODUCT_IMG_3}}: ⑦ VISUAL STORY 감성 배너 이미지 (풀폭)' : ''}
+${imageCount >= 4 ? '- {{PRODUCT_IMG_4}}: ② BRAND STORY 또는 ③ PROBLEM 섹션에 추가 이미지' : ''}
+이미지 마커가 없는 섹션은 인라인 SVG 그라데이션 플레이스홀더 사용.
+외부 이미지 URL(placehold.co, unsplash 등) 절대 사용 금지.`
+    : `이미지 없음. 모든 이미지 자리에 인라인 SVG 그라데이션 플레이스홀더 사용.
+외부 이미지 URL 절대 사용 금지.`;
 
   const ref = compressAnalysis(analysis);
 
@@ -141,11 +151,11 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
 [상세] ${product.detailDescription.slice(0, 200)}
 [타겟] ${product.targetAudience}
 [디자인] ${toneStyle}
-[이미지] ${images}
+[이미지] ${imageInstruction}
 
 ━━━ 한국형 전환율 극대화 섹션 구조 ━━━
 
-① HERO: 흰 배경, 상품 이미지(대형) + 강렬한 헤드라인(소비자 욕망/고민을 자극). 별점 ★4.9 + 리뷰수 뱃지. 한 줄 서브카피. "N만 명이 선택한" 소셜 프루프 작게.
+① HERO: 흰 배경. 상단에 상품 이미지 크게 배치(<img src="{{PRODUCT_IMG_1}}" style="width:100%;max-height:500px;object-fit:contain" /> 사용. 이미지 없으면 SVG 플레이스홀더). 아래에 강렬한 헤드라인. 별점 ★4.9 + 리뷰수 뱃지. 서브카피. "N만 명이 선택한" 소셜 프루프.
 
 ② BRAND STORY: 브랜드 철학 또는 제품 탄생 배경. 감성적 인용구 스타일. "솔직히 말하면, 이 제품을 만든 이유는..." 같은 진정성 카피.
 
@@ -243,6 +253,17 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
     if (!html.includes("</body>")) html += "\n</body>";
     html += "\n</html>";
   }
+
+  // 이미지 마커 → 실제 base64 이미지 교체
+  const realImages = product.images.filter(img => img.startsWith("data:"));
+  for (let i = 0; i < realImages.length; i++) {
+    const marker = `{{PRODUCT_IMG_${i + 1}}}`;
+    html = html.split(marker).join(realImages[i]);
+  }
+  // 남은 마커 → SVG 플레이스홀더로 교체
+  html = html.replace(/\{\{PRODUCT_IMG_\d+\}\}/g,
+    `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' fill='%23f0f0f0'%3E%3Crect width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='32' fill='%23ccc'%3EProduct Image%3C/text%3E%3C/svg%3E`
+  );
 
   return html;
 }
