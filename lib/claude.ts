@@ -123,7 +123,7 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
   const images = (() => {
     const safe = product.images.filter(i => !i.startsWith("data:"));
     if (safe.length) return safe.map((u, i) => `img${i + 1}: ${u}`).join(", ");
-    return "placehold.co 사용 (600x600, 800x600, 400x400 등 다양한 사이즈와 적절한 배경색)";
+    return "이미지 자리에는 외부 URL 사용 금지. 대신 인라인 SVG 그라데이션 배경 사용. 예: <div style='width:100%;aspect-ratio:1;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-card);'><svg width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='#ccc' stroke-width='1'><rect x='3' y='3' width='18' height='18' rx='2'/><circle cx='8.5' cy='8.5' r='1.5'/><path d='M21 15l-5-5L5 21'/></svg></div>";
   })();
 
   const ref = compressAnalysis(analysis);
@@ -165,7 +165,7 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
 
 ⑩ COMPARISON: 기존 제품 vs 우리 제품 비교표. 5항목. 체크/X 아이콘. 우리 컬럼 하이라이트.
 
-⑪ FAQ: 5개 아코디언. 실질적 질문("민감한 피부에도 괜찮나요?" "얼마나 지속되나요?"). JS 토글.
+⑪ FAQ: 5개 질문/답변 모두 펼쳐진 상태로 표시. 아코디언/토글/+버튼 사용 금지. 질문(굵은 글씨) + 바로 아래 답변 형태. 깔끔한 구분선.
 
 ⑫ TRUST BADGES: 무료배송 · 환불보장 · 정품인증 · 테스트완료 · 친환경패키지. 아이콘 그리드 가로배열.
 
@@ -190,12 +190,20 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
   --radius-card:16px;
 • @keyframes fadeInUp, slideInLeft 등 스크롤 애니메이션
 • .animate-on-scroll{opacity:0;transform:translateY(30px);transition:all 0.7s ease}
-• <script>에 IntersectionObserver + FAQ 아코디언 토글 JS
+• <script>에 IntersectionObserver JS (FAQ는 펼침 상태, 아코디언 금지)
 • 섹션 여백: py-20~py-32 (padding:80px 0~120px 0)
 • 반응형: 모바일 퍼스트, max-w-6xl mx-auto px-4
 • 모든 스타일에 var() CSS 변수 사용
+• 외부 이미지 URL 절대 사용 금지 (placehold.co, unsplash, via.placeholder 등). 이미지 자리는 인라인 SVG 그라데이션 플레이스홀더만 사용.
+• 아코디언/펼치기/접기/+ 버튼 절대 금지. 모든 콘텐츠는 펼친 상태로 표시.
 • 마크다운 코드블록 절대 금지
-• <!DOCTYPE html>로 시작하는 완전한 HTML 파일만 출력`;
+• <!DOCTYPE html>로 시작하는 완전한 HTML 파일만 출력
+
+━━━ 스마트스토어 상세이미지 기준 ━━━
+• 각 섹션을 <section data-slice="1">, <section data-slice="2"> ... 형태로 data-slice 속성 부여
+• 각 섹션 너비 860px 고정 (스마트스토어 상세이미지 기준), max-width:860px, margin:0 auto
+• 섹션 간 여백 최소화 (각 섹션이 독립 이미지로 슬라이스됨을 고려)
+• 배경색은 반드시 섹션 내부에 포함 (투명 배경 금지)`;
 
   const res = await withRetry(() =>
     getClient().messages.create({

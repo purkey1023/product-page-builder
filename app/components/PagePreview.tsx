@@ -60,7 +60,37 @@ function buildHtml(base: string, s: Styles): string {
 
   const injected = `${fontLinks}
 <style id="__ev__">${buildCssVars(s)}</style>
+<style id="__mv_style__">
+.__mv_bar__{position:absolute;top:8px;right:8px;z-index:9999;display:flex;gap:4px;opacity:0;transition:opacity .2s}
+section:hover>.__mv_bar__,div>.__mv_bar__{opacity:1}
+.__mv_bar__ button{width:30px;height:30px;border-radius:8px;background:#6366f1;color:#fff;border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.__mv_bar__ button:hover{background:#4f46e5}
+.__sec_outline__{outline:2px dashed rgba(99,102,241,0.3)!important;outline-offset:2px}
+</style>
 <script id="__eb__">(function(){
+  function getSections(){
+    var secs=document.querySelectorAll('body>section,body>div>section,main>section,main>div>section');
+    if(secs.length===0) secs=document.querySelectorAll('body>div,body>section');
+    return Array.from(secs).filter(function(s){return s.tagName!=='SCRIPT'&&s.tagName!=='STYLE'&&!s.id.startsWith('__');});
+  }
+  function clearMoveUI(){
+    document.querySelectorAll('.__mv_bar__').forEach(function(b){b.remove()});
+    document.querySelectorAll('.__sec_outline__').forEach(function(s){s.classList.remove('__sec_outline__')});
+  }
+  function addMoveUI(){
+    clearMoveUI();
+    getSections().forEach(function(sec){
+      sec.style.position='relative';
+      sec.classList.add('__sec_outline__');
+      var bar=document.createElement('div');bar.className='__mv_bar__';
+      var up=document.createElement('button');up.innerHTML='&#9650;';
+      up.onclick=function(ev){ev.stopPropagation();ev.preventDefault();var prev=sec.previousElementSibling;if(prev&&prev.tagName!=='SCRIPT'&&prev.tagName!=='STYLE'&&!prev.id.startsWith('__')){sec.parentNode.insertBefore(sec,prev);addMoveUI();}};
+      var dn=document.createElement('button');dn.innerHTML='&#9660;';
+      dn.onclick=function(ev){ev.stopPropagation();ev.preventDefault();var next=sec.nextElementSibling;if(next&&next.tagName!=='SCRIPT'&&!next.id.startsWith('__')){sec.parentNode.insertBefore(next,sec);addMoveUI();}};
+      bar.appendChild(up);bar.appendChild(dn);
+      sec.insertBefore(bar,sec.firstChild);
+    });
+  }
   window.addEventListener('message',function(e){
     if(!e.data||!e.data.__ed__)return;
     if(e.data.t==='CSS'){var el=document.getElementById('__ev__');if(el)el.textContent=e.data.css;}
@@ -71,8 +101,19 @@ function buildHtml(base: string, s: Styles): string {
         else{el.contentEditable='false';el.style.outline='';el.style.minHeight='';}
       });
     }
+    if(e.data.t==='MOVE'){
+      if(e.data.on) addMoveUI(); else clearMoveUI();
+    }
     if(e.data.t==='GET'){
+      clearMoveUI();
+      document.querySelectorAll('[contenteditable]').forEach(function(el){el.removeAttribute('contenteditable');el.style.outline='';el.style.minHeight='';});
       window.parent.postMessage({__ed__:true,t:'HTML',html:'<!DOCTYPE html>\\n'+document.documentElement.outerHTML},'*');
+    }
+    if(e.data.t==='SLICES'){
+      var secs=document.querySelectorAll('[data-slice]');
+      if(secs.length===0) secs=getSections();
+      var count=secs.length;
+      window.parent.postMessage({__ed__:true,t:'SLICE_COUNT',count:count},'*');
     }
   });
 })();<\/script>`;
@@ -92,8 +133,10 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
   const [showCode, setShowCode] = useState(false);
   const [showEditor, setShowEditor] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [moveMode, setMoveMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingSlices, setExportingSlices] = useState(false);
   const [styles, setStyles] = useState<Styles>({ ...DEFAULT });
   const [activeTab, setActiveTab] = useState<"theme" | "color" | "font">("theme");
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -121,6 +164,7 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
   }, [styles, send]);
 
   useEffect(() => { send({ t: "EDIT", on: editMode }); }, [editMode, send]);
+  useEffect(() => { send({ t: "MOVE", on: moveMode }); }, [moveMode, send]);
 
   const getEditedHtml = useCallback((): Promise<string> => {
     return new Promise(resolve => {
@@ -166,6 +210,33 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
     finally { setExporting(false); }
   };
 
+  const exportSlices = async (format: "png" | "jpeg") => {
+    setExportingSlices(true);
+    try {
+      const h = await getEditedHtml();
+      const res = await fetch("/api/export-slices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html: h, format }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "슬라이스 생성 실패");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `product-page-slices.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("슬라이스 내보내기 실패: " + (e instanceof Error ? e.message : e));
+    } finally {
+      setExportingSlices(false);
+    }
+  };
+
   const lineCount = html.split("\n").length;
   const sizeKb = Math.round(new Blob([html]).size / 1024);
 
@@ -199,16 +270,22 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
             <p className="text-xs text-white/70 mt-0.5">실시간으로 디자인을 변경하세요</p>
           </div>
 
-          {/* 텍스트 편집 토글 */}
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+          {/* 편집 모드 토글 */}
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 space-y-2">
             <button
-              onClick={() => setEditMode(!editMode)}
+              onClick={() => { setEditMode(!editMode); if (moveMode) setMoveMode(false); }}
               className={`w-full py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${editMode ? "bg-indigo-600 text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}
             >
-              <span>{editMode ? "✏️" : "✏️"}</span>
-              {editMode ? "편집 모드 ON — 텍스트 클릭해서 수정" : "텍스트 편집 모드 켜기"}
+              ✏️ {editMode ? "텍스트 편집 ON" : "텍스트 편집"}
             </button>
-            {editMode && <p className="text-xs text-indigo-600 mt-1.5 text-center">페이지의 텍스트를 클릭해서 바로 수정하세요</p>}
+            <button
+              onClick={() => { setMoveMode(!moveMode); if (editMode) setEditMode(false); }}
+              className={`w-full py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 ${moveMode ? "bg-purple-600 text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}
+            >
+              ↕️ {moveMode ? "위치 편집 ON — 섹션 ▲▼ 이동" : "섹션 위치 변경"}
+            </button>
+            {editMode && <p className="text-xs text-indigo-600 text-center">텍스트를 클릭해서 바로 수정하세요</p>}
+            {moveMode && <p className="text-xs text-purple-600 text-center">섹션에 마우스를 올리면 ▲▼ 버튼이 나타납니다</p>}
           </div>
 
           {/* 탭 */}
@@ -361,6 +438,14 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
               className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 transition disabled:opacity-50">
               {exporting ? "⏳ PNG 생성중..." : "🎯 Figma용 PNG"}
             </button>
+            <button onClick={() => exportSlices("jpeg")} disabled={exportingSlices}
+              className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:opacity-90 transition disabled:opacity-50">
+              {exportingSlices ? "⏳ 슬라이스 생성중..." : "📦 스마트스토어 JPG"}
+            </button>
+            <button onClick={() => exportSlices("png")} disabled={exportingSlices}
+              className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90 transition disabled:opacity-50">
+              {exportingSlices ? "⏳ 생성중..." : "📦 PNG 슬라이스"}
+            </button>
           </div>
         </div>
 
@@ -378,7 +463,7 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
                 srcDoc={renderedHtml}
                 className="w-full h-full border-0"
                 title="상품페이지 미리보기"
-                sandbox="allow-scripts"
+                sandbox="allow-scripts allow-same-origin"
               />
             </div>
           </div>
