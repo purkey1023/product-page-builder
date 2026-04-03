@@ -463,7 +463,7 @@ export default function PagePreview({ html, onBack, onRegenerate }: PagePreviewP
                 srcDoc={renderedHtml}
                 className="w-full h-full border-0"
                 title="상품페이지 미리보기"
-                sandbox="allow-scripts allow-same-origin"
+                sandbox="allow-scripts"
               />
             </div>
           </div>
