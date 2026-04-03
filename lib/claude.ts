@@ -121,20 +121,12 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
     trendy: "강렬한 컬러 대비, 볼드 타이포, 다이내믹 레이아웃, 밀레니얼 감성",
   }[product.tone];
 
-  const imageCount = product.imageCount ?? product.images.length;
-  const hasImages = imageCount > 0;
-
-  const imageInstruction = hasImages
-    ? `사용자가 ${imageCount}장의 상품 이미지를 업로드했습니다.
-이미지를 아래 마커로 적재적소에 배치하세요 (반드시 <img src="{{PRODUCT_IMG_N}}" /> 형태로):
-- {{PRODUCT_IMG_1}}: ① HERO 섹션 메인 상품 이미지 (가장 크게, width:100%, max-height:500px, object-fit:contain)
-${imageCount >= 2 ? '- {{PRODUCT_IMG_2}}: ④ KEY BENEFITS 또는 ⑥ INGREDIENT 섹션에 상품 디테일 이미지' : ''}
-${imageCount >= 3 ? '- {{PRODUCT_IMG_3}}: ⑦ VISUAL STORY 감성 배너 이미지 (풀폭)' : ''}
-${imageCount >= 4 ? '- {{PRODUCT_IMG_4}}: ② BRAND STORY 또는 ③ PROBLEM 섹션에 추가 이미지' : ''}
-이미지 마커가 없는 섹션은 인라인 SVG 그라데이션 플레이스홀더 사용.
-외부 이미지 URL(placehold.co, unsplash 등) 절대 사용 금지.`
-    : `이미지 없음. 모든 이미지 자리에 인라인 SVG 그라데이션 플레이스홀더 사용.
-외부 이미지 URL 절대 사용 금지.`;
+  const imageInstruction = `이미지 자리에 반드시 이 정확한 HTML을 넣으세요 (절대 변형 금지):
+  <img src="__PRODUCT_IMG__" alt="${product.name}" style="width:100%;max-height:500px;object-fit:contain;border-radius:var(--radius-card);" />
+위 img 태그를 다음 섹션에 반드시 1개씩 배치하세요:
+- ① HERO 섹션: 헤드라인 위 또는 바로 아래에 메인 상품 이미지
+- ⑦ VISUAL STORY 섹션: 감성 배너 이미지
+외부 이미지 URL(placehold.co, unsplash 등) 절대 사용 금지.`;
 
   const ref = compressAnalysis(analysis);
 
@@ -155,7 +147,7 @@ ${imageCount >= 4 ? '- {{PRODUCT_IMG_4}}: ② BRAND STORY 또는 ③ PROBLEM 섹
 
 ━━━ 한국형 전환율 극대화 섹션 구조 ━━━
 
-① HERO: 흰 배경. 상단에 상품 이미지 크게 배치(<img src="{{PRODUCT_IMG_1}}" style="width:100%;max-height:500px;object-fit:contain" /> 사용. 이미지 없으면 SVG 플레이스홀더). 아래에 강렬한 헤드라인. 별점 ★4.9 + 리뷰수 뱃지. 서브카피. "N만 명이 선택한" 소셜 프루프.
+① HERO: 흰 배경. 상단에 반드시 <img src="__PRODUCT_IMG__" alt="상품" style="width:100%;max-height:500px;object-fit:contain;border-radius:var(--radius-card);" /> 넣기. 아래에 강렬한 헤드라인. 별점 ★4.9 + 리뷰수 뱃지. 서브카피. "N만 명이 선택한" 소셜 프루프.
 
 ② BRAND STORY: 브랜드 철학 또는 제품 탄생 배경. 감성적 인용구 스타일. "솔직히 말하면, 이 제품을 만든 이유는..." 같은 진정성 카피.
 
@@ -254,16 +246,61 @@ ${imageCount >= 4 ? '- {{PRODUCT_IMG_4}}: ② BRAND STORY 또는 ③ PROBLEM 섹
     html += "\n</html>";
   }
 
-  // 이미지 마커 → 실제 base64 이미지 교체
+  // ─── 이미지 삽입 (Claude가 마커를 안 쓸 수 있으므로 강제 삽입) ───
   const realImages = product.images.filter(img => img.startsWith("data:"));
-  for (let i = 0; i < realImages.length; i++) {
-    const marker = `{{PRODUCT_IMG_${i + 1}}}`;
-    html = html.split(marker).join(realImages[i]);
+  const svgPlaceholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' fill='%23f0f0f0'%3E%3Crect width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='32' fill='%23ccc'%3EProduct Image%3C/text%3E%3C/svg%3E`;
+
+  if (realImages.length > 0) {
+    // 방법 1: __PRODUCT_IMG__ 마커가 있으면 순서대로 교체
+    let imgIndex = 0;
+    html = html.replace(/__PRODUCT_IMG__/g, () => {
+      const src = realImages[imgIndex % realImages.length];
+      imgIndex++;
+      return src;
+    });
+
+    // 방법 2: 마커가 하나도 없었으면 → 섹션 기반으로 강제 삽입
+    if (imgIndex === 0) {
+      const imgTag = (src: string) =>
+        `<div style="text-align:center;padding:20px 0;"><img src="${src}" alt="${product.name}" style="width:100%;max-height:500px;object-fit:contain;border-radius:16px;" /></div>`;
+
+      // HERO 섹션(첫 번째 section)에 메인 이미지 삽입
+      const firstSectionMatch = html.match(/<section[^>]*>/i);
+      if (firstSectionMatch) {
+        const pos = html.indexOf(firstSectionMatch[0]) + firstSectionMatch[0].length;
+        html = html.slice(0, pos) + imgTag(realImages[0]) + html.slice(pos);
+      }
+
+      // 2번째 이미지가 있으면 중간 섹션에 삽입
+      if (realImages.length >= 2) {
+        const sections = html.match(/<section[^>]*>/gi) || [];
+        const midIdx = Math.floor(sections.length / 2);
+        if (midIdx > 0 && sections[midIdx]) {
+          let searchFrom = 0;
+          for (let s = 0; s <= midIdx; s++) {
+            searchFrom = html.indexOf(sections[s], searchFrom) + sections[s].length;
+          }
+          html = html.slice(0, searchFrom) + imgTag(realImages[1]) + html.slice(searchFrom);
+        }
+      }
+
+      // 3번째 이미지: 3/4 지점 섹션
+      if (realImages.length >= 3) {
+        const sections = html.match(/<section[^>]*>/gi) || [];
+        const threeQuarter = Math.floor(sections.length * 3 / 4);
+        if (threeQuarter > 0 && sections[threeQuarter]) {
+          let searchFrom = 0;
+          for (let s = 0; s <= threeQuarter; s++) {
+            searchFrom = html.indexOf(sections[s], searchFrom) + sections[s].length;
+          }
+          html = html.slice(0, searchFrom) + imgTag(realImages[2]) + html.slice(searchFrom);
+        }
+      }
+    }
+  } else {
+    // 이미지 없음 → 마커만 SVG 플레이스홀더로 교체
+    html = html.replace(/__PRODUCT_IMG__/g, svgPlaceholder);
   }
-  // 남은 마커 → SVG 플레이스홀더로 교체
-  html = html.replace(/\{\{PRODUCT_IMG_\d+\}\}/g,
-    `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' fill='%23f0f0f0'%3E%3Crect width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='32' fill='%23ccc'%3EProduct Image%3C/text%3E%3C/svg%3E`
-  );
 
   return html;
 }
