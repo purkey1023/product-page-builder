@@ -60,62 +60,44 @@ function buildHtml(base: string, s: Styles): string {
 
   const injected = `${fontLinks}
 <style id="__ev__">${buildCssVars(s)}</style>
-<style id="__mv_style__">
-.__mv_bar__{position:absolute;top:8px;right:8px;z-index:9999;display:flex;gap:4px;opacity:0;transition:opacity .2s}
-section:hover>.__mv_bar__,div>.__mv_bar__{opacity:1}
-.__mv_bar__ button{width:30px;height:30px;border-radius:8px;background:#6366f1;color:#fff;border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.__mv_bar__ button:hover{background:#4f46e5}
-.__sec_outline__{outline:2px dashed rgba(99,102,241,0.3)!important;outline-offset:2px}
-</style>
 <script id="__eb__">(function(){
-  function getSections(){
-    var secs=document.querySelectorAll('body>section,body>div>section,main>section,main>div>section');
-    if(secs.length===0) secs=document.querySelectorAll('body>div,body>section');
-    return Array.from(secs).filter(function(s){return s.tagName!=='SCRIPT'&&s.tagName!=='STYLE'&&!s.id.startsWith('__');});
-  }
-  function clearMoveUI(){
-    document.querySelectorAll('.__mv_bar__').forEach(function(b){b.remove()});
-    document.querySelectorAll('.__sec_outline__').forEach(function(s){s.classList.remove('__sec_outline__')});
-  }
-  function addMoveUI(){
-    clearMoveUI();
-    getSections().forEach(function(sec){
-      sec.style.position='relative';
-      sec.classList.add('__sec_outline__');
-      var bar=document.createElement('div');bar.className='__mv_bar__';
-      var up=document.createElement('button');up.innerHTML='&#9650;';
-      up.onclick=function(ev){ev.stopPropagation();ev.preventDefault();var prev=sec.previousElementSibling;if(prev&&prev.tagName!=='SCRIPT'&&prev.tagName!=='STYLE'&&!prev.id.startsWith('__')){sec.parentNode.insertBefore(sec,prev);addMoveUI();}};
-      var dn=document.createElement('button');dn.innerHTML='&#9660;';
-      dn.onclick=function(ev){ev.stopPropagation();ev.preventDefault();var next=sec.nextElementSibling;if(next&&next.tagName!=='SCRIPT'&&!next.id.startsWith('__')){sec.parentNode.insertBefore(next,sec);addMoveUI();}};
-      bar.appendChild(up);bar.appendChild(dn);
-      sec.insertBefore(bar,sec.firstChild);
-    });
-  }
-  window.addEventListener('message',function(e){
-    if(!e.data||!e.data.__ed__)return;
-    if(e.data.t==='CSS'){var el=document.getElementById('__ev__');if(el)el.textContent=e.data.css;}
-    if(e.data.t==='EDIT'){
-      var on=e.data.on;
-      document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,a,li,td,th,button,label,div[class*="text"]').forEach(function(el){
-        if(on){el.contentEditable='true';el.style.outline='2px dashed rgba(99,102,241,0.5)';el.style.minHeight='1em';}
-        else{el.contentEditable='false';el.style.outline='';el.style.minHeight='';}
-      });
-    }
-    if(e.data.t==='MOVE'){
-      if(e.data.on) addMoveUI(); else clearMoveUI();
-    }
-    if(e.data.t==='GET'){
-      clearMoveUI();
-      document.querySelectorAll('[contenteditable]').forEach(function(el){el.removeAttribute('contenteditable');el.style.outline='';el.style.minHeight='';});
-      window.parent.postMessage({__ed__:true,t:'HTML',html:'<!DOCTYPE html>\\n'+document.documentElement.outerHTML},'*');
-    }
-    if(e.data.t==='SLICES'){
-      var secs=document.querySelectorAll('[data-slice]');
-      if(secs.length===0) secs=getSections();
-      var count=secs.length;
-      window.parent.postMessage({__ed__:true,t:'SLICE_COUNT',count:count},'*');
-    }
-  });
+window.addEventListener("message",function(e){
+if(!e.data||!e.data.__ed__)return;
+if(e.data.t==="CSS"){var el=document.getElementById("__ev__");if(el)el.textContent=e.data.css;}
+if(e.data.t==="EDIT"){
+var on=e.data.on;
+document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,span,a,li,td,th,label").forEach(function(el){
+if(on){el.contentEditable="true";el.style.outline="2px dashed rgba(99,102,241,0.5)";el.style.minHeight="1em";}
+else{el.contentEditable="false";el.style.outline="";el.style.minHeight="";}
+});
+}
+if(e.data.t==="MOVE"){
+var on2=e.data.on;
+document.querySelectorAll(".__mv").forEach(function(b){b.remove()});
+if(on2){
+var secs=document.querySelectorAll("section");
+if(!secs.length)secs=document.querySelectorAll("body>div");
+secs.forEach(function(sec){
+sec.style.position="relative";
+sec.style.outline=on2?"2px dashed rgba(99,102,241,0.3)":"";
+var d=document.createElement("div");d.className="__mv";
+d.style.cssText="position:absolute;top:4px;right:4px;z-index:9999;display:flex;gap:4px;";
+var u=document.createElement("button");u.textContent="\\u25B2";
+u.style.cssText="width:28px;height:28px;border-radius:6px;background:#6366f1;color:#fff;border:none;cursor:pointer;font-size:13px;";
+u.onclick=function(ev){ev.stopPropagation();var p=sec.previousElementSibling;if(p&&p.tagName!=="SCRIPT"&&p.tagName!=="STYLE")sec.parentNode.insertBefore(sec,p);};
+var dn=document.createElement("button");dn.textContent="\\u25BC";
+dn.style.cssText="width:28px;height:28px;border-radius:6px;background:#6366f1;color:#fff;border:none;cursor:pointer;font-size:13px;";
+dn.onclick=function(ev){ev.stopPropagation();var n=sec.nextElementSibling;if(n&&n.tagName!=="SCRIPT")sec.parentNode.insertBefore(n,sec);};
+d.appendChild(u);d.appendChild(dn);sec.insertBefore(d,sec.firstChild);
+});
+}
+}
+if(e.data.t==="GET"){
+document.querySelectorAll(".__mv").forEach(function(b){b.remove()});
+document.querySelectorAll("[contenteditable]").forEach(function(el){el.removeAttribute("contenteditable");el.style.outline="";});
+window.parent.postMessage({__ed__:true,t:"HTML",html:"<!DOCTYPE html>\\n"+document.documentElement.outerHTML},"*");
+}
+});
 })();<\/script>`;
 
   if (base.includes("</head>")) return base.replace("</head>", injected + "\n</head>");
