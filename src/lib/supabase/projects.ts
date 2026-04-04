@@ -1,4 +1,5 @@
 import { createClientSupabase } from './client'
+import { ensureSession } from './auth'
 import type { Project, CreateProjectInput } from '@/types'
 
 // ──────────────────────────────────────
@@ -35,8 +36,8 @@ export async function getProject(id: string): Promise<Project | null> {
 // ──────────────────────────────────────
 export async function createProject(input: CreateProjectInput): Promise<Project> {
   const supabase = createClientSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('로그인이 필요합니다.')
+  const user = await ensureSession()
+  if (!user) throw new Error('세션 생성에 실패했습니다.')
 
   const { data, error } = await supabase
     .from('projects')

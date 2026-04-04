@@ -5,27 +5,21 @@ import Link from 'next/link'
 import { Plus, Loader2 } from 'lucide-react'
 import { getProjects } from '@/lib/supabase/projects'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
-import { createClientSupabase } from '@/lib/supabase/client'
+import { ensureSession } from '@/lib/supabase/auth'
 import type { Project } from '@/types'
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     const init = async () => {
       try {
-        const supabase = createClientSupabase()
-        const { data: { user } } = await supabase.auth.getUser()
-        setIsLoggedIn(!!user)
-        if (user) {
-          const list = await getProjects()
-          setProjects(list)
-        }
+        await ensureSession()
+        const list = await getProjects()
+        setProjects(list)
       } catch {
-        // Supabase 미설정 상태에서도 UI는 정상 표시
-        setIsLoggedIn(false)
+        // 오류 발생 시에도 빈 대시보드 표시
       } finally {
         setIsLoading(false)
       }
@@ -37,25 +31,6 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin text-gray-400" size={24} />
-      </div>
-    )
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">상세페이지 메이커</h1>
-          <p className="text-gray-500">제품 이미지 1장으로 AI가 상세페이지 초안을 자동 생성합니다</p>
-        </div>
-        <div className="flex gap-3">
-          <Link
-            href="/login"
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-          >
-            시작하기
-          </Link>
-        </div>
       </div>
     )
   }

@@ -1,4 +1,5 @@
 import { createClientSupabase } from './client'
+import { ensureSession } from './auth'
 import { v4 as uuidv4 } from 'uuid'
 
 const BUCKET = 'product-images'
@@ -22,8 +23,8 @@ export async function uploadProductImage(file: File): Promise<UploadResult> {
   }
 
   const supabase = createClientSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('로그인이 필요합니다.')
+  const user = await ensureSession()
+  if (!user) throw new Error('세션 생성에 실패했습니다.')
 
   const path = `${user.id}/${uuidv4()}.${ext}`
 
