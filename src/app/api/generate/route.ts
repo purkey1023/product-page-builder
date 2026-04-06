@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { MoodType } from '@/types'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
 
 interface GenerateRequest {
   productName: string
@@ -131,8 +132,8 @@ ${designGuide}
     const geminiBody = {
       contents: [{ role: 'user', parts }],
       generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 12000,
+        temperature: 0.85,
+        maxOutputTokens: 32000,
       },
     }
 
