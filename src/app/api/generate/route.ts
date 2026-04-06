@@ -137,20 +137,50 @@ ${designGuide}
       },
     }
 
-    const response = await fetch(GEMINI_URL, {
+    let html = ''
+
+    // 1차: Gemini 시도
+    const geminiRes = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(geminiBody),
     })
 
-    if (!response.ok) {
-      const errBody = await response.text()
-      console.error('[Gemini Error]', response.status, errBody)
-      return NextResponse.json({ error: `AI 오류 (${response.status})` }, { status: 500 })
+    if (geminiRes.ok) {
+      const result = await geminiRes.json()
+      html = result?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      console.log('[Gemini] 성공, 크기:', html.length)
+    } else {
+      // 2차: Anthropic fallback
+      console.log('[Gemini] 실패 (' + geminiRes.status + '), Anthropic fallback...')
+      const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+      if (ANTHROPIC_KEY) {
+        const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 12000,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        })
+        if (anthropicRes.ok) {
+          const aResult = await anthropicRes.json()
+          html = aResult?.content?.[0]?.text || ''
+          console.log('[Anthropic] fallback 성공, 크기:', html.length)
+        } else {
+          const errBody = await anthropicRes.text()
+          console.error('[Anthropic fallback Error]', anthropicRes.status, errBody)
+          return NextResponse.json({ error: `AI 생성 실패 (Gemini: ${geminiRes.status}, Anthropic: ${anthropicRes.status})` }, { status: 500 })
+        }
+      } else {
+        return NextResponse.json({ error: `AI 오류 (${geminiRes.status}) - Gemini 속도 제한. 잠시 후 다시 시도하세요.` }, { status: 500 })
+      }
     }
-
-    const result = await response.json()
-    let html = result?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     // 마크다운 코드블록 제거
     html = html.replace(/```html\s*/gi, '').replace(/```\s*/g, '')
