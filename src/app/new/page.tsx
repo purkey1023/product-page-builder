@@ -1,28 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { useState, useRef } from 'react'
+import { ArrowLeft, Loader2, Download, RefreshCw, Smartphone, Monitor } from 'lucide-react'
 import Link from 'next/link'
-import { ArrowLeft, Loader2 } from 'lucide-react'
-import { ImageUploadStep } from '@/components/wizard/ImageUploadStep'
-import { MoodSelector } from '@/components/wizard/MoodSelector'
-import { uploadProductImage } from '@/lib/supabase/storage'
-import { createProject } from '@/lib/supabase/projects'
 import type { MoodType } from '@/types'
-
-const schema = z.object({
-  productName: z.string().min(1, '제품명을 입력하세요').max(50),
-  category: z.string().min(1, '카테고리를 선택하세요'),
-  mood: z.enum(['premium', 'clean', 'natural', 'impact']),
-  keyPoint1: z.string().min(1, '소구포인트를 입력하세요'),
-  keyPoint2: z.string().min(1, '소구포인트를 입력하세요'),
-  keyPoint3: z.string().min(1, '소구포인트를 입력하세요'),
-})
-
-type FormValues = z.infer<typeof schema>
 
 const CATEGORIES = [
   '뷰티/스킨케어', '헤어케어', '바디케어', '향수/방향',
@@ -31,60 +12,73 @@ const CATEGORIES = [
   '반려동물', '스포츠/아웃도어', '인테리어', '기타',
 ]
 
-const KEYPOINT_PLACEHOLDERS = [
-  '예: 72시간 지속 보습',
-  '예: 무향 저자극 성분',
-  '예: 피부과 테스트 완료',
+const MOODS: { value: MoodType; label: string; emoji: string; desc: string }[] = [
+  { value: 'premium', label: '프리미엄', emoji: '✨', desc: '고급스럽고 신뢰감' },
+  { value: 'clean', label: '클린/미니멀', emoji: '🧊', desc: '깔끔하고 직관적' },
+  { value: 'natural', label: '내추럴', emoji: '🌿', desc: '따뜻하고 자연스러운' },
+  { value: 'impact', label: '임팩트', emoji: '🔥', desc: '강렬하고 눈에 띄는' },
 ]
 
 export default function NewProjectPage() {
-  const router = useRouter()
+  const [step, setStep] = useState<'form' | 'loading' | 'preview'>('form')
+  const [generatedHtml, setGeneratedHtml] = useState('')
+  const [loadingStatus, setLoadingStatus] = useState('')
+  const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Form state
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [status, setStatus] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [productName, setProductName] = useState('')
+  const [category, setCategory] = useState('')
+  const [mood, setMood] = useState<MoodType>('clean')
+  const [kp1, setKp1] = useState('')
+  const [kp2, setKp2] = useState('')
+  const [kp3, setKp3] = useState('')
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { mood: 'clean' },
-  })
-
-  const selectedMood = watch('mood')
-
-  const handleImageChange = (file: File) => {
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+    }
   }
 
-  const onSubmit = async (values: FormValues) => {
-    if (!imageFile) {
-      alert('제품 이미지를 업로드해주세요.')
+  const handleGenerate = async () => {
+    if (!productName || !category || !kp1 || !kp2 || !kp3) {
+      alert('모든 필수 항목을 입력해주세요.')
       return
     }
 
-    setIsSubmitting(true)
+    setStep('loading')
+    setLoadingStatus('AI가 상세페이지를 디자인하고 있어요...')
 
     try {
-      // 1. 이미지 업로드
-      setStatus('이미지 업로드 중...')
-      const uploaded = await uploadProductImage(imageFile)
+      // 이미지를 base64로 변환 (있으면)
+      let imageBase64: string | undefined
+      if (imageFile) {
+        const reader = new FileReader()
+        imageBase64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string
+            // data:image/png;base64, 부분 제거
+            resolve(result.split(',')[1])
+          }
+          reader.readAsDataURL(imageFile)
+        })
+      }
 
-      // 2. AI 생성
-      setStatus('AI가 상세페이지를 작성하고 있어요...')
+      setLoadingStatus('AI가 디자인 + 카피 + 레이아웃을 생성하고 있어요...')
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productName: values.productName,
-          category: values.category,
-          mood: values.mood as MoodType,
-          keyPoints: [values.keyPoint1, values.keyPoint2, values.keyPoint3],
+          productName,
+          category,
+          mood,
+          keyPoints: [kp1, kp2, kp3],
+          imageBase64,
         }),
       })
 
@@ -92,194 +86,208 @@ export default function NewProjectPage() {
         const err = await res.json()
         throw new Error(err.error ?? 'AI 생성 실패')
       }
-      const { sections } = await res.json()
 
-      // 3. 프로젝트 저장
-      setStatus('프로젝트 저장 중...')
-      const project = await createProject({
-        name: values.productName,
-        product: {
-          name: values.productName,
-          category: values.category,
-          mood: values.mood as MoodType,
-          keyPoints: [values.keyPoint1, values.keyPoint2, values.keyPoint3],
-          imageUrl: uploaded.url,
-          imagePath: uploaded.path,
-        },
-        sections,
-      })
+      const data = await res.json()
+      let html = data.html || ''
 
-      router.push(`/editor/${project.id}`)
+      // __PRODUCT_IMG__ 마커를 실제 이미지로 교체
+      if (imagePreview) {
+        html = html.replace(/__PRODUCT_IMG__/g, imagePreview)
+      } else {
+        // 이미지 없으면 SVG 플레이스홀더
+        html = html.replace(/__PRODUCT_IMG__/g,
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23f0f0f0'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='24' fill='%23ccc'%3EProduct%3C/text%3E%3C/svg%3E"
+        )
+      }
+
+      setGeneratedHtml(html)
+      setStep('preview')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '오류가 발생했습니다.'
-      alert(msg)
-      setIsSubmitting(false)
-      setStatus('')
+      alert(err instanceof Error ? err.message : '생성 실패')
+      setStep('form')
     }
   }
 
-  // 생성 중 로딩 화면
-  if (isSubmitting) {
+  const handleDownloadHtml = () => {
+    const blob = new Blob([generatedHtml], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${productName}-상세페이지.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ─── 로딩 화면 ───
+  if (step === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-5 bg-gray-50">
-        <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-          <Loader2 className="animate-spin text-blue-600" size={28} />
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 bg-gradient-to-b from-gray-50 to-white">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+          <Loader2 className="animate-spin text-white" size={32} />
         </div>
         <div className="text-center">
-          <p className="font-semibold text-gray-800">{status}</p>
-          <p className="text-sm text-gray-400 mt-1">잠시만 기다려주세요 (약 20~30초)</p>
+          <p className="font-bold text-gray-800 text-lg">{loadingStatus}</p>
+          <p className="text-sm text-gray-400 mt-2">Gemini AI가 디자인 + 카피 + 레이아웃을 한번에 생성합니다</p>
+          <p className="text-xs text-gray-300 mt-1">약 15~30초 소요</p>
         </div>
-        {/* 진행 단계 표시 */}
-        <div className="flex gap-2 mt-2">
-          {['이미지 업로드', 'AI 생성', '저장'].map((step, i) => {
-            const isActive =
-              (i === 0 && status.includes('이미지')) ||
-              (i === 1 && status.includes('AI')) ||
-              (i === 2 && status.includes('저장'))
-            return (
-              <div
-                key={step}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  isActive ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'
-                }`}
-              >
-                {step}
-              </div>
-            )
-          })}
+        <div className="flex gap-2">
+          {['이미지 분석', 'AI 디자인', '카피 작성', 'HTML 생성'].map((s, i) => (
+            <div key={s} className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 animate-pulse"
+              style={{ animationDelay: `${i * 0.3}s` }}>
+              {s}
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
+  // ─── 프리뷰 화면 ───
+  if (step === 'preview') {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        {/* 툴바 */}
+        <div className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setStep('form')} className="text-gray-500 hover:text-gray-800">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="font-bold text-gray-800">{productName}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button onClick={() => setViewMode('mobile')}
+                className={`p-1.5 rounded-md transition ${viewMode === 'mobile' ? 'bg-white shadow-sm' : ''}`}>
+                <Smartphone size={16} className={viewMode === 'mobile' ? 'text-blue-600' : 'text-gray-400'} />
+              </button>
+              <button onClick={() => setViewMode('desktop')}
+                className={`p-1.5 rounded-md transition ${viewMode === 'desktop' ? 'bg-white shadow-sm' : ''}`}>
+                <Monitor size={16} className={viewMode === 'desktop' ? 'text-blue-600' : 'text-gray-400'} />
+              </button>
+            </div>
+            <button onClick={handleGenerate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border text-gray-600 hover:bg-gray-50">
+              <RefreshCw size={14} /> 재생성
+            </button>
+            <button onClick={handleDownloadHtml}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+              <Download size={14} /> HTML 다운로드
+            </button>
+          </div>
+        </div>
+
+        {/* 프리뷰 영역 */}
+        <div className="flex-1 flex justify-center py-6 px-4">
+          <div className={`bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300 ${
+            viewMode === 'mobile' ? 'w-[390px]' : 'w-full max-w-[860px]'
+          }`} style={{ height: 'calc(100vh - 80px)' }}>
+            <iframe
+              ref={iframeRef}
+              srcDoc={generatedHtml}
+              className="w-full h-full border-0"
+              title="상세페이지 프리뷰"
+              sandbox="allow-scripts"
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── 입력 폼 ───
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto px-5 py-8">
-        {/* 헤더 */}
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/" className="text-gray-400 hover:text-gray-700 transition-colors">
+          <Link href="/" className="text-gray-400 hover:text-gray-700">
             <ArrowLeft size={20} />
           </Link>
           <h1 className="text-xl font-bold text-gray-900">새 프로젝트</h1>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* 이미지 업로드 */}
-          <Section title="제품 이미지" required>
-            <ImageUploadStep preview={imagePreview} onFileChange={handleImageChange} />
-            {!imageFile && (
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                투명 배경(누끼) PNG를 업로드하면 더 멋진 결과물이 만들어져요
-              </p>
-            )}
-          </Section>
+        <div className="space-y-6">
+          {/* 이미지 */}
+          <div>
+            <label className="text-sm font-semibold text-gray-800">제품 이미지 <span className="text-red-400">*</span></label>
+            <div className="mt-2 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-blue-300 transition cursor-pointer"
+              onClick={() => document.getElementById('img-input')?.click()}>
+              {imagePreview ? (
+                <img src={imagePreview} alt="미리보기" className="max-h-48 mx-auto rounded-lg" />
+              ) : (
+                <>
+                  <div className="text-3xl mb-2">📷</div>
+                  <p className="text-sm text-gray-500">이미지를 클릭하거나 드래그하세요</p>
+                  <p className="text-xs text-gray-400">투명 배경 PNG 권장</p>
+                </>
+              )}
+              <input id="img-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            </div>
+          </div>
 
           {/* 제품명 */}
-          <Section title="제품명" required>
-            <input
-              {...register('productName')}
-              placeholder="예: 수분 크림 토너 200ml"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-            />
-            {errors.productName && (
-              <ErrorMsg>{errors.productName.message}</ErrorMsg>
-            )}
-          </Section>
+          <div>
+            <label className="text-sm font-semibold text-gray-800">제품명 <span className="text-red-400">*</span></label>
+            <input value={productName} onChange={(e) => setProductName(e.target.value)}
+              placeholder="예: 메디큐브 제로모공 원데이 세럼"
+              className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          </div>
 
           {/* 카테고리 */}
-          <Section title="카테고리" required>
-            <select
-              {...register('category')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white appearance-none"
-            >
-              <option value="">카테고리를 선택하세요</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+          <div>
+            <label className="text-sm font-semibold text-gray-800">카테고리 <span className="text-red-400">*</span></label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+              <option value="">선택하세요</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            {errors.category && <ErrorMsg>{errors.category.message}</ErrorMsg>}
-          </Section>
+          </div>
 
           {/* 분위기 */}
-          <Section title="상세페이지 분위기" required>
-            <MoodSelector
-              value={selectedMood}
-              onChange={(v) => setValue('mood', v)}
-            />
-          </Section>
+          <div>
+            <label className="text-sm font-semibold text-gray-800">분위기 <span className="text-red-400">*</span></label>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {MOODS.map(m => (
+                <button key={m.value} type="button" onClick={() => setMood(m.value)}
+                  className={`p-3 rounded-xl border-2 text-left transition ${
+                    mood === m.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <span className="text-lg">{m.emoji}</span>
+                  <p className="font-semibold text-sm text-gray-800 mt-1">{m.label}</p>
+                  <p className="text-xs text-gray-500">{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* 핵심 소구포인트 */}
-          <Section
-            title="핵심 소구포인트"
-            required
-            description="제품의 강점을 3가지 입력하세요. AI가 이를 바탕으로 카피를 작성합니다."
-          >
-            <div className="space-y-2.5">
-              {([1, 2, 3] as const).map((n) => (
-                <div key={n} className="flex gap-2.5 items-center">
-                  <span className="text-xs font-bold text-blue-500 w-4 text-center flex-shrink-0">
-                    {n}
-                  </span>
-                  <input
-                    {...register(`keyPoint${n}` as const)}
-                    placeholder={KEYPOINT_PLACEHOLDERS[n - 1]}
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-                  />
-                </div>
-              ))}
-              {(errors.keyPoint1 || errors.keyPoint2 || errors.keyPoint3) && (
-                <ErrorMsg>소구포인트를 모두 입력해주세요</ErrorMsg>
-              )}
-            </div>
-          </Section>
+          <div>
+            <label className="text-sm font-semibold text-gray-800">핵심 소구포인트 <span className="text-red-400">*</span></label>
+            <p className="text-xs text-gray-400 mt-0.5 mb-2">AI가 이걸 바탕으로 디자인 + 카피를 생성합니다</p>
+            {[
+              { val: kp1, set: setKp1, ph: '예: 72시간 지속 보습' },
+              { val: kp2, set: setKp2, ph: '예: 피부과 전문의 개발' },
+              { val: kp3, set: setKp3, ph: '예: 민감성 피부 적합' },
+            ].map((item, i) => (
+              <div key={i} className="flex gap-2 items-center mb-2">
+                <span className="text-xs font-bold text-blue-500 w-4 text-center">{i + 1}</span>
+                <input value={item.val} onChange={(e) => item.set(e.target.value)}
+                  placeholder={item.ph}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+            ))}
+          </div>
 
-          {/* 제출 버튼 */}
-          <button
-            type="submit"
-            disabled={!imageFile}
-            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-base hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            상세페이지 생성하기 ✨
+          {/* 생성 버튼 */}
+          <button onClick={handleGenerate}
+            disabled={!productName || !category || !kp1 || !kp2 || !kp3}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 disabled:opacity-40 transition shadow-lg">
+            🚀 AI 상세페이지 생성하기
           </button>
-
-          {!imageFile && (
-            <p className="text-center text-xs text-gray-400">
-              이미지를 먼저 업로드해야 생성할 수 있어요
-            </p>
-          )}
-        </form>
+          <p className="text-center text-xs text-gray-400">
+            Gemini AI가 디자인 + 카피 + 레이아웃을 한번에 생성합니다
+          </p>
+        </div>
       </div>
     </div>
   )
-}
-
-function Section({
-  title,
-  required,
-  description,
-  children,
-}: {
-  title: string
-  required?: boolean
-  description?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="mb-2">
-        <span className="text-sm font-semibold text-gray-800">
-          {title}
-          {required && <span className="text-red-400 ml-1">*</span>}
-        </span>
-        {description && (
-          <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-        )}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function ErrorMsg({ children }: { children: React.ReactNode }) {
-  return <p className="text-red-500 text-xs mt-1">{children}</p>
 }
