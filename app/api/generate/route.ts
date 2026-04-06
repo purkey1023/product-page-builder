@@ -3,9 +3,6 @@ import { generateProductPage, AnalysisResult, ProductInfo } from "@/lib/claude";
 
 export const maxDuration = 300;
 
-// base64 이미지가 포함된 큰 요청 허용
-export const bodyParser = { sizeLimit: "20mb" };
-
 export async function POST(request: NextRequest) {
   const { analysis, product } = (await request.json()) as {
     analysis: AnalysisResult;

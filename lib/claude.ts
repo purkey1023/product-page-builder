@@ -121,91 +121,107 @@ export async function generateProductPage(analysis: AnalysisResult, product: Pro
     trendy: "강렬한 컬러 대비, 볼드 타이포, 다이내믹 레이아웃, 밀레니얼 감성",
   }[product.tone];
 
-  const imageInstruction = `이미지 자리에 반드시 이 정확한 HTML을 넣으세요 (절대 변형 금지):
-  <img src="__PRODUCT_IMG__" alt="${product.name}" style="width:100%;max-height:500px;object-fit:contain;border-radius:var(--radius-card);" />
-위 img 태그를 다음 섹션에 반드시 1개씩 배치하세요:
-- ① HERO 섹션: 헤드라인 위 또는 바로 아래에 메인 상품 이미지
-- ⑦ VISUAL STORY 섹션: 감성 배너 이미지
-외부 이미지 URL(placehold.co, unsplash 등) 절대 사용 금지.`;
-
   const ref = compressAnalysis(analysis);
 
-  // ★ 한국 이커머스 CRO 리서치 기반 (올리브영/무신사/라네즈/설화수/쿠팡 패턴 분석)
-  // 카피 공식: 문제 공감 → 수치 증거 → 감성 스토리텔링 → 신뢰 → CTA
-  // 한국 불확실성 회피 지수 85 → 상세 정보 필수, 리뷰 97.2% 확인
-  const prompt = `당신은 올리브영·무신사·29CM·마켓컬리 수준의 한국 상세페이지 전문가입니다.
-"팔리는 페이지"를 만듭니다. 구매 버튼은 넣지 마세요 (상세페이지 이미지용).
+  const prompt = `당신은 연 매출 100억 이상 브랜드의 상품 상세페이지를 제작하는 최고급 웹 디자이너입니다.
+올리브영, 무신사, 29CM, 라네즈 공식몰 수준의 프리미엄 상세페이지를 만듭니다.
 
-[레퍼런스] ${ref}
-[상품명] ${product.name} [가격] ${product.price}
-[설명] ${product.shortDescription}
-[특징] ${product.features.filter(f => f.trim()).join(" · ")}
-[상세] ${product.detailDescription.slice(0, 200)}
+[상품명] ${product.name}
+[가격] ${product.price}
+[한줄] ${product.shortDescription}
+[특징] ${product.features.filter(f => f.trim()).join(" / ")}
+[상세] ${product.detailDescription.slice(0, 300)}
 [타겟] ${product.targetAudience}
-[디자인] ${toneStyle}
-[이미지] ${imageInstruction}
+[톤] ${toneStyle}
+[레퍼런스] ${ref}
 
-━━━ 한국형 전환율 극대화 섹션 구조 ━━━
+━━━ 필수 출력 형식 ━━━
+• <!DOCTYPE html>로 시작하는 완전한 HTML 파일 1개만 출력
+• 마크다운 코드블록(\`\`\`) 절대 사용하지 마세요
+• 구매버튼/결제 UI 넣지 마세요
 
-① HERO: 흰 배경. 상단에 반드시 <img src="__PRODUCT_IMG__" alt="상품" style="width:100%;max-height:500px;object-fit:contain;border-radius:var(--radius-card);" /> 넣기. 아래에 강렬한 헤드라인. 별점 ★4.9 + 리뷰수 뱃지. 서브카피. "N만 명이 선택한" 소셜 프루프.
+━━━ 핵심 디자인 규칙 (반드시 지켜야 함) ━━━
 
-② BRAND STORY: 브랜드 철학 또는 제품 탄생 배경. 감성적 인용구 스타일. "솔직히 말하면, 이 제품을 만든 이유는..." 같은 진정성 카피.
+1. **Tailwind 사용 금지**. 모든 스타일은 <style> 태그에 순수 CSS로 작성.
+2. Google Fonts CDN으로 'Noto Sans KR'(본문) + 'Playfair Display'(제목) 로드.
+3. <style>에 CSS 변수 선언:
+   :root { --bg:#ffffff; --bg2:#f8f7f4; --dark:#1a1a2e; --accent:#c9a96e; --text:#1a1a1a; --muted:#888; --heading:'Playfair Display',serif; --body:'Noto Sans KR',sans-serif; --radius:16px; }
+4. body { font-family:var(--body); color:var(--text); margin:0; line-height:1.7; }
+5. 섹션마다 padding: 80px 20px; max-width: 800px; margin: 0 auto;
+6. 이미지 자리에 <img src="__PRODUCT_IMG__" /> 넣기 (2군데: HERO + VISUAL 섹션)
+7. 이미지 없는 섹션의 시각적 요소: CSS gradient 배경의 div 사용
+8. 스크롤 애니메이션: IntersectionObserver로 .reveal 클래스 토글
 
-③ PROBLEM → SOLUTION: "이런 고민, 있으셨나요?" 고객 페인포인트 3가지(아이콘+텍스트) 나열 → "그래서 만들었습니다" 솔루션 선언. 공감 우선.
+━━━ 섹션 구조 (순서 반드시 지킬 것) ━━━
 
-④ KEY BENEFITS: 핵심 장점 4개. SVG 아이콘 + 굵은 제목 + 성분→효과 번역("히알루론산이 피부 속 수분을 끌어당겨 하루종일 촉촉"). 카드형 그리드.
+■ HERO
+큰 상품 이미지(<img src="__PRODUCT_IMG__" style="width:100%;max-height:480px;object-fit:contain" />)
+대형 헤드라인 (font-size:2.8rem, font-family:var(--heading), font-weight:700, letter-spacing:-1px)
+서브카피 (font-size:1.1rem, color:var(--muted))
+별점 ★★★★★ 4.9 (1,247 리뷰) 뱃지 (배경:#FFF8E7, 색:#D4A017, border-radius:30px)
+가격 표시 (font-size:2rem, font-weight:800)
 
-⑤ PROOF IN NUMBERS: 임상/실험 결과 수치 4개 크게 표시("수분 47%↑", "만족도 98%", "재구매율 89%"). font-size:3rem+. 출처 작게 표기. 카운트업 애니메이션.
+■ BRAND STORY
+"우리는 왜 이 제품을 만들었는가" 감성 스토리텔링
+큰 인용구 스타일 (font-size:1.5rem, font-style:italic, border-left:4px solid var(--accent))
+브랜드 철학 2~3문장
 
-⑥ INGREDIENT/TECH: 핵심 성분 3가지. 원형 아이콘 + 성분명 + 유래 + "왜 효과적인지" 소비자 언어로 설명. 고급감.
+■ PROBLEM → SOLUTION
+"이런 고민, 있으셨나요?" 섹션 타이틀
+3개 페인포인트 카드 (아이콘 + 제목 + 설명)
+"그래서 만들었습니다" 솔루션 선언
+카드: background:white, border-radius:var(--radius), box-shadow:0 4px 20px rgba(0,0,0,0.06), padding:32px
 
-⑦ VISUAL STORY: 풀폭 감성 배너. 제품 사용 장면 이미지 + 감성 카피 한 줄. 또는 Before→After 비주얼.
+■ KEY BENEFITS
+4개 혜택 2x2 그리드 (display:grid; grid-template-columns:1fr 1fr; gap:24px)
+각 카드: 큰 아이콘/이모지(font-size:2.5rem) + 굵은 제목 + "성분이 ~해서 ~효과" 설명
+카드 hover:transform:translateY(-4px) 효과
 
-⑧ HOW TO USE: 사용법 3단계. 타임라인/넘버링 UI. 아이콘+제목+설명. "딱 이것만 하세요".
+■ PROOF (임상 수치)
+4개 수치 가로 배열 (display:flex, justify-content:center, gap:40px)
+각 수치: 큰 숫자(font-size:3rem, font-weight:900, color:var(--accent)) + 설명 + 출처
 
-⑨ REAL REVIEWS: 실제 후기 4개. 별점★★★★★ + 구매자 이니셜(김*진 28세) + 구체적 사용 경험("2주 써봤는데 정말 다릅니다") + 인증구매 뱃지.
+■ INGREDIENTS
+3개 핵심 성분, 원형 아이콘 배경(width:80px,height:80px,border-radius:50%,background:var(--bg2))
+성분명(굵게) + 유래 + 소비자 언어 효과 설명
 
-⑩ COMPARISON: 기존 제품 vs 우리 제품 비교표. 5항목. 체크/X 아이콘. 우리 컬럼 하이라이트.
+■ VISUAL BANNER
+풀폭 배경(background:var(--dark), color:white, padding:100px 20px, text-align:center)
+<img src="__PRODUCT_IMG__" /> 또는 감성 카피 (font-size:2rem, font-family:var(--heading))
 
-⑪ FAQ: 5개 질문/답변 모두 펼쳐진 상태로 표시. 아코디언/토글/+버튼 사용 금지. 질문(굵은 글씨) + 바로 아래 답변 형태. 깔끔한 구분선.
+■ HOW TO USE
+3단계 (큰 숫자 01/02/03 + 제목 + 설명)
+세로 타임라인 또는 가로 스텝 UI
 
-⑫ TRUST BADGES: 무료배송 · 환불보장 · 정품인증 · 테스트완료 · 친환경패키지. 아이콘 그리드 가로배열.
+■ REVIEWS
+4개 리뷰 카드 (별점 ★★★★★ + 이름(김*진, 28세) + 구체적 후기 + "인증구매" 뱃지)
+카드 배경:white, 그림자, border-radius
 
-⑬ FOOTER: 브랜드명, 고객센터, 정책 링크, 저작권.
+■ COMPARISON TABLE
+5개 항목 비교표 (일반 제품 vs 우리 제품)
+우리 제품 컬럼 하이라이트(background:rgba(201,169,110,0.1))
+✓ / ✗ 아이콘 사용
 
-━━━ 카피라이팅 규칙 ━━━
-• 문제-시간 앵커링: "화장이 무너지는 오후 2시" 같은 구체적 상황 묘사
-• 혜택 번역: 성분명만 쓰지 말고 "~해서 ~한 효과" 로 번역
-• 구체적 숫자: "98%의 사용자가 2주 만에 효과를 느꼈습니다"
-• 감성적 묘사: 제품 사용 순간의 경험을 감각적으로 표현
-• 핵심 메시지 1개: 전체 페이지가 하나의 메시지를 강화하도록
-• 구매 버튼, 결제 관련 UI 절대 넣지 마세요 (상세페이지 이미지 전용)
+■ FAQ
+5개 Q&A 모두 펼쳐진 상태 (아코디언 금지)
+Q: font-weight:700 + A: color:var(--muted) + 구분선(border-bottom)
 
-━━━ 디자인 코드 규칙 ━━━
-• Google Fonts: Noto Sans KR + Playfair Display CDN
-• Tailwind CSS CDN
-• <style>에 :root CSS 변수 필수:
-  --bg-main:#ffffff; --bg-dark:#1a1a2e; --bg-section:#f8f8f6;
-  --color-primary:#1a1a2e; --color-accent:#c9a96e;
-  --color-text:#1a1a1a; --color-text-muted:#6b6b6b;
-  --font-heading:'Playfair Display',serif; --font-body:'Noto Sans KR',sans-serif;
-  --radius-card:16px;
-• @keyframes fadeInUp, slideInLeft 등 스크롤 애니메이션
-• .animate-on-scroll{opacity:0;transform:translateY(30px);transition:all 0.7s ease}
-• <script>에 IntersectionObserver JS (FAQ는 펼침 상태, 아코디언 금지)
-• 섹션 여백: py-20~py-32 (padding:80px 0~120px 0)
-• 반응형: 모바일 퍼스트, max-w-6xl mx-auto px-4
-• 모든 스타일에 var() CSS 변수 사용
-• 외부 이미지 URL 절대 사용 금지 (placehold.co, unsplash, via.placeholder 등). 이미지 자리는 인라인 SVG 그라데이션 플레이스홀더만 사용.
-• 아코디언/펼치기/접기/+ 버튼 절대 금지. 모든 콘텐츠는 펼친 상태로 표시.
-• 마크다운 코드블록 절대 금지
-• <!DOCTYPE html>로 시작하는 완전한 HTML 파일만 출력
+■ TRUST BADGES
+아이콘 5개 가로 배열 (무료배송/환불보장/정품인증/테스트완료/친환경)
 
-━━━ 스마트스토어 상세이미지 기준 ━━━
-• 각 섹션을 <section data-slice="1">, <section data-slice="2"> ... 형태로 data-slice 속성 부여
-• 각 섹션 너비 860px 고정 (스마트스토어 상세이미지 기준), max-width:860px, margin:0 auto
-• 섹션 간 여백 최소화 (각 섹션이 독립 이미지로 슬라이스됨을 고려)
-• 배경색은 반드시 섹션 내부에 포함 (투명 배경 금지)`;
+■ FOOTER
+브랜드명 + 고객센터 + 정책 링크 + 저작권
+
+━━━ CSS 디자인 디테일 (고급 퀄리티 핵심) ━━━
+• 섹션 교대 배경: 흰색(var(--bg))과 크림(var(--bg2)) 교대 사용
+• 제목 아래 accent 라인: width:60px; height:3px; background:var(--accent); margin:16px auto 32px;
+• 카드 호버 효과: transition:all 0.3s; &:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.1)}
+• 부드러운 그라데이션 배경: linear-gradient(135deg, #f8f7f4 0%, #ffffff 100%)
+• 넉넉한 여백: 섹션 간 padding 80~120px, 요소 간 gap 24~40px
+• 세련된 타이포: 제목은 var(--heading), letter-spacing:-0.5px~-1px
+• 텍스트 색상 계층: 제목 var(--text), 본문 #444, 보조 var(--muted)
+• 반응형: @media(max-width:768px) 그리드→1열, 폰트 축소`;
+
 
   const res = await withRetry(() =>
     getClient().messages.create({
