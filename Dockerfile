@@ -20,6 +20,8 @@ RUN npm ci
 # 소스 복사 & 빌드
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# 캐시 무효화: 2026-04-07
+ARG CACHE_BUST=20260407
 RUN npm run build
 
 # next start로 실행 (standalone 대신 - 더 안정적)
