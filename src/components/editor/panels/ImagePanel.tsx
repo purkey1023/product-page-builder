@@ -35,6 +35,20 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
     const generateStyle = style || element.src.replace('generate:', '') || 'lifestyle'
     setIsGenerating(true)
     try {
+      // 제품 이미지 URL → base64 변환 (AI 분석용)
+      let productImageBase64 = ''
+      if (project.product.imageUrl) {
+        try {
+          const imgRes = await fetch(project.product.imageUrl)
+          const blob = await imgRes.blob()
+          productImageBase64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+            reader.readAsDataURL(blob)
+          })
+        } catch { /* 실패 시 분석 없이 진행 */ }
+      }
+
       const res = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,6 +57,7 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
           category: project.product.category,
           mood: project.product.mood,
           styles: [generateStyle],
+          productImageBase64,
         }),
       })
       if (!res.ok) throw new Error('생성 실패')

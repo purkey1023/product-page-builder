@@ -72,8 +72,18 @@ export default function NewProjectPage() {
         imagePath = upload.path
       }
 
-      // ── 2단계: AI 콘텐츠 생성 + 이미지 생성 병렬 ──
-      setLoadingStatus('AI가 11개 섹션을 디자인하고 있어요... (1~2분 소요)')
+      // ── 2단계: 제품 사진 base64 추출 (AI 분석용) ──
+      let productImageBase64 = ''
+      if (imageFile) {
+        productImageBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+          reader.readAsDataURL(imageFile)
+        })
+      }
+
+      // ── 3단계: AI 콘텐츠 생성 + 이미지 생성 병렬 ──
+      setLoadingStatus('AI가 제품을 분석하고 11개 섹션을 디자인하고 있어요... (1~2분 소요)')
 
       const [contentRes, imageRes] = await Promise.allSettled([
         fetch('/api/generate', {
@@ -90,6 +100,7 @@ export default function NewProjectPage() {
           body: JSON.stringify({
             productName, category, mood,
             styles: ['texture', 'ingredient', 'lifestyle', 'banner', 'hero_bg'],
+            productImageBase64,
           }),
         }),
       ])
