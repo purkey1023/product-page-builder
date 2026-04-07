@@ -2,33 +2,20 @@ import { isSupabaseConfigured, createClientSupabase } from './client'
 import { ensureSession } from './auth'
 import type { Project, CreateProjectInput } from '@/types'
 import { v4 as uuidv4 } from 'uuid'
-
-const LOCAL_STORAGE_KEY = 'ppb_projects'
-
-// ──────────────────────────────────────
-// localStorage 헬퍼 (Supabase 미설정 시)
-// ──────────────────────────────────────
-function getLocalProjects(): Project[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function setLocalProjects(projects: Project[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(projects))
-}
+import {
+  getAllProjects as idbGetAll,
+  getProjectById as idbGet,
+  putProject as idbPut,
+  deleteProjectById as idbDelete,
+} from '@/lib/local-db'
 
 // ──────────────────────────────────────
 // 프로젝트 목록 조회
 // ──────────────────────────────────────
 export async function getProjects(): Promise<Project[]> {
   if (!isSupabaseConfigured) {
-    return getLocalProjects().sort(
+    const all = await idbGetAll()
+    return all.sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
   }
@@ -48,7 +35,7 @@ export async function getProjects(): Promise<Project[]> {
 // ──────────────────────────────────────
 export async function getProject(id: string): Promise<Project | null> {
   if (!isSupabaseConfigured) {
-    return getLocalProjects().find((p) => p.id === id) ?? null
+    return idbGet(id)
   }
 
   const supabase = createClientSupabase()
@@ -77,9 +64,7 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
       createdAt: now,
       updatedAt: now,
     }
-    const projects = getLocalProjects()
-    projects.push(project)
-    setLocalProjects(projects)
+    await idbPut(project)
     return project
   }
 
@@ -107,15 +92,8 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
 // ──────────────────────────────────────
 export async function saveProject(project: Project): Promise<void> {
   if (!isSupabaseConfigured) {
-    const projects = getLocalProjects()
-    const idx = projects.findIndex((p) => p.id === project.id)
     const updated = { ...project, updatedAt: new Date().toISOString() }
-    if (idx >= 0) {
-      projects[idx] = updated
-    } else {
-      projects.push(updated)
-    }
-    setLocalProjects(projects)
+    await idbPut(updated)
     return
   }
 
@@ -138,8 +116,7 @@ export async function saveProject(project: Project): Promise<void> {
 // ──────────────────────────────────────
 export async function deleteProject(id: string): Promise<void> {
   if (!isSupabaseConfigured) {
-    const projects = getLocalProjects().filter((p) => p.id !== id)
-    setLocalProjects(projects)
+    await idbDelete(id)
     return
   }
 
