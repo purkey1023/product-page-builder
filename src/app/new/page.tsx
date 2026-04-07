@@ -73,7 +73,7 @@ export default function NewProjectPage() {
       }
 
       // ── 2단계: AI 콘텐츠 생성 + 이미지 생성 병렬 ──
-      setLoadingStatus('AI가 상세페이지를 디자인하고 있어요...')
+      setLoadingStatus('AI가 11개 섹션을 디자인하고 있어요... (1~2분 소요)')
 
       const [contentRes, imageRes] = await Promise.allSettled([
         fetch('/api/generate', {
@@ -89,7 +89,7 @@ export default function NewProjectPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productName, category, mood,
-            styles: ['texture', 'ingredient', 'lifestyle', 'banner'],
+            styles: ['texture', 'ingredient', 'lifestyle', 'banner', 'hero_bg'],
           }),
         }),
       ])
@@ -128,27 +128,25 @@ export default function NewProjectPage() {
 
       // 섹션 엘리먼트에서 generate: 마커를 실제 이미지로 교체
       // + 특정 섹션 배경에 AI 생성 이미지 자동 적용
-      const sectionBgMap: Record<string, string> = {
-        texture: 'texture',
-        banner: 'banner',
-        hero: 'lifestyle',
+      // 섹션별 배경 이미지 매핑
+      const sectionBgMap: Record<string, { style: string; overlay: string }> = {
+        texture: { style: 'texture', overlay: 'rgba(0,0,0,0.15)' },
+        banner: { style: 'banner', overlay: 'rgba(0,0,0,0.4)' },
+        cta: { style: 'hero_bg', overlay: 'rgba(0,0,0,0.5)' },
       }
 
       for (const section of sections) {
-        // 섹션 배경 이미지 적용
-        const bgStyle = sectionBgMap[section.type]
-        if (bgStyle && aiImages[bgStyle] && section.background.type === 'color') {
-          // texture, banner 섹션은 배경 이미지로 전환
-          if (section.type === 'texture' || section.type === 'banner') {
-            section.background = {
-              type: 'image',
-              value: aiImages[bgStyle],
-              overlay: 'rgba(0,0,0,0.3)',
-            }
+        // 섹션 배경에 AI 이미지 적용
+        const bgMapping = sectionBgMap[section.type]
+        if (bgMapping && aiImages[bgMapping.style]) {
+          section.background = {
+            type: 'image',
+            value: aiImages[bgMapping.style],
+            overlay: bgMapping.overlay,
           }
         }
 
-        // 엘리먼트 이미지 마커 교체
+        // 엘리먼트 이미지 마커 → 실제 이미지 교체
         for (const el of section.elements) {
           if (el.type === 'image') {
             if (el.src === 'product' && imageUrl) {
@@ -199,11 +197,11 @@ export default function NewProjectPage() {
         </div>
         <div className="text-center">
           <p className="font-bold text-gray-800 text-lg">{loadingStatus}</p>
-          <p className="text-sm text-gray-400 mt-2">AI가 780px 이미지 시퀀스 상세페이지를 디자인합니다</p>
-          <p className="text-xs text-gray-300 mt-1">약 20~40초 소요</p>
+          <p className="text-sm text-gray-400 mt-2">Gemini AI가 11개 섹션 + 5장의 이미지를 생성합니다</p>
+          <p className="text-xs text-gray-300 mt-1">약 1~2분 소요 (퀄리티 최우선)</p>
         </div>
         <div className="flex gap-2">
-          {['레이아웃 설계', 'AI 카피', 'AI 이미지', '조립'].map((s, i) => (
+          {['11개 섹션 설계', '카피라이팅', '이미지 5장', '레이아웃 조립'].map((s, i) => (
             <div
               key={s}
               className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 animate-pulse"

@@ -12,23 +12,40 @@ interface GenerateImageRequest {
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
-  hero: 'Elegant product photography on a gradient studio background with dramatic lighting and subtle reflection. The product bottle/tube/jar is the hero, shot slightly from below for a premium monumental feel. Soft bokeh lights in background. Ultra high-end beauty brand e-commerce style. 4K, photorealistic.',
-  texture: 'Extreme macro close-up of skincare product texture being squeezed or spread. Creamy, glossy, satisfying texture with visible consistency. Soft diffused lighting. The texture fills 80% of the frame. Beauty editorial macro photography style. No product packaging visible.',
-  lifestyle: 'Aspirational lifestyle flat-lay scene: the product surrounded by natural botanical elements (fresh leaves, flower petals, water droplets on marble surface). Morning sunlight casting soft shadows. Clean, airy, editorial beauty photography. Organic and luxurious feel.',
-  ingredient: 'Scientific yet beautiful visualization of natural ingredients. Glass petri dishes and test tubes with colorful botanical extracts, fresh herbs, and molecular structure hints. Clean white lab-meets-nature aesthetic. Professional cosmetic ingredient photography.',
-  banner: 'Wide cinematic beauty banner image. Dreamy gradient background (soft pastels or deep luxury tones). Abstract flowing silk or liquid gold/water elements. No product, just mood and atmosphere. Perfect for text overlay. Ultra-wide aspect ratio feel even in square crop.',
+  texture: 'Extreme macro close-up of skincare/cosmetic product texture. Creamy, glossy, satisfying gel or cream texture being spread on clean surface. Soft diffused studio lighting. The texture fills 80% of the frame. Premium beauty editorial macro photography. Luxurious and clean aesthetic. No product packaging, no text.',
+  ingredient: 'Beautiful still-life arrangement of natural botanical ingredients on clean surface. Fresh green leaves, flower petals, water droplets, glass vials with colorful plant extracts. Soft morning light with gentle shadows. Lab-meets-nature aesthetic. Professional cosmetic ingredient photography. No text, no labels.',
+  lifestyle: 'Aspirational beauty lifestyle flat-lay scene. Skincare product bottle/tube surrounded by natural botanical elements, fresh flowers, smooth pebbles, on marble or light wood surface. Morning sunlight casting soft shadows. Clean, airy, editorial beauty photography. Organic and luxurious feel. No text.',
+  banner: 'Abstract artistic beauty background. Flowing liquid silk or water in soft luxury tones. Dreamy gradient with subtle light effects. Elegant and sophisticated atmosphere. Perfect as background for text overlay. No objects, no product, pure mood and texture. No text.',
+  hero_bg: 'Soft gradient studio background for premium beauty product photography. Subtle light rays or bokeh effects. Elegant and sophisticated color tones. Clean and uncluttered. Perfect backdrop for a product hero shot. No objects, no text.',
 }
 
-async function generateOneImage(productName: string, category: string, mood: string, style: string): Promise<string> {
+async function generateOneImage(
+  productName: string,
+  category: string,
+  mood: string,
+  style: string
+): Promise<string> {
   const moodMap: Record<string, string> = {
-    premium: 'luxurious dark tones, gold and black, elegant',
-    clean: 'minimal white and blue, pure, clinical clean',
-    natural: 'warm earth tones, green botanical, organic',
-    impact: 'bold contrast, neon accents, dynamic energy',
+    premium: 'luxurious dark tones with gold accents, dramatic chiaroscuro lighting, deep blacks and warm golds',
+    clean: 'minimal white and soft blue tones, bright airy feeling, pure clinical clean aesthetic',
+    natural: 'warm earth tones, soft greens and beiges, organic botanical feeling, warm golden light',
+    impact: 'bold dramatic contrast, deep dark tones with vibrant red or neon accents, high energy',
   }
 
-  const stylePrompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.hero
-  const prompt = `Generate an image: ${stylePrompt} Product type: ${productName} (${category}). Color mood: ${moodMap[mood] || 'modern elegant'}. IMPORTANT: No text, no letters, no logos, no labels, no watermarks anywhere in the image.`
+  const stylePrompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.texture
+  const moodDesc = moodMap[mood] || 'modern elegant'
+  const prompt = `Generate a high-quality image for a premium Korean beauty brand product page.
+
+Style: ${stylePrompt}
+
+Product context: ${productName} (${category})
+Color mood: ${moodDesc}
+
+Requirements:
+- Ultra high quality, 4K resolution feel
+- Professional commercial photography standard
+- ABSOLUTELY NO text, letters, logos, labels, or watermarks
+- Clean, premium, editorial quality`
 
   const response = await fetch(GEMINI_URL, {
     method: 'POST',
@@ -50,7 +67,6 @@ async function generateOneImage(productName: string, category: string, mood: str
   const result = await response.json()
   const parts = result?.candidates?.[0]?.content?.parts || []
 
-  // 이미지 파트 찾기
   for (const part of parts) {
     if (part.inlineData?.data) {
       const mimeType = part.inlineData.mimeType || 'image/png'
@@ -58,7 +74,7 @@ async function generateOneImage(productName: string, category: string, mood: str
     }
   }
 
-  throw new Error(`이미지가 응답에 포함되지 않았습니다 (${style})`)
+  throw new Error(`이미지 미포함 (${style})`)
 }
 
 export async function POST(req: NextRequest) {
@@ -74,25 +90,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY가 설정되지 않았습니다.' }, { status: 500 })
     }
 
-    // 순차 생성 (Gemini 무료 티어 rate limit 고려)
-    const stylesToGenerate = styles.slice(0, 4)
+    // 순차 생성 (rate limit 고려, 퀄리티 우선)
     const images: Record<string, string> = {}
 
-    for (const style of stylesToGenerate) {
+    for (const style of styles) {
       try {
+        console.log(`[Gemini Image] ${style} 생성 시작...`)
         const dataUrl = await generateOneImage(productName, category, mood, style)
         images[style] = dataUrl
-        console.log(`[Gemini Image] ${style} 생성 완료`)
+        console.log(`[Gemini Image] ${style} 생성 완료 ✓`)
+        // Rate limit 간격 (2초)
+        if (styles.indexOf(style) < styles.length - 1) {
+          await new Promise(r => setTimeout(r, 2000))
+        }
       } catch (err) {
         console.error(`[${style}] 실패:`, err instanceof Error ? err.message : err)
-        // 실패해도 다음 이미지 계속 생성
       }
     }
 
     return NextResponse.json({
       images,
       generated: Object.keys(images).length,
-      requested: stylesToGenerate.length,
+      requested: styles.length,
     })
   } catch (error) {
     console.error('[/api/generate-image]', error)
