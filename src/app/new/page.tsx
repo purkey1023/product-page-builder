@@ -68,59 +68,112 @@ export default function NewProjectPage() {
         })
       }
 
-      setLoadingStatus('AI가 디자인 + 카피 + 레이아웃을 생성하고 있어요...')
+      // ─── 1단계: AI 카피+레이아웃 생성 + AI 이미지 생성 동시 실행 ───
+      setLoadingStatus('AI가 디자인을 구성하고 있어요...')
 
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productName,
-          category,
-          mood,
-          keyPoints: [kp1, kp2, kp3],
-          imageBase64,
+      // HTML 생성과 AI 이미지 생성을 병렬로
+      const [htmlRes, imgRes] = await Promise.allSettled([
+        // AI HTML 생성
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productName, category, mood,
+            keyPoints: [kp1, kp2, kp3],
+            imageBase64,
+          }),
         }),
-      })
+        // AI 파생 이미지 생성 (DALL-E)
+        fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productName, category, mood,
+            styles: ['hero', 'texture', 'lifestyle', 'ingredient'],
+          }),
+        }),
+      ])
 
-      if (!res.ok) {
-        const err = await res.json()
+      // HTML 결과 처리
+      if (htmlRes.status === 'rejected' || !htmlRes.value.ok) {
+        const err = htmlRes.status === 'fulfilled' ? await htmlRes.value.json() : { error: '생성 실패' }
         throw new Error(err.error ?? 'AI 생성 실패')
       }
-
-      const data = await res.json()
+      const data = await htmlRes.value.json()
       let html = data.html || ''
 
-      // 이미지 삽입: 마커 교체 + 강제 삽입
-      if (imagePreview) {
-        // 1차: __PRODUCT_IMG__ 마커 교체
-        const markerCount = (html.match(/__PRODUCT_IMG__/g) || []).length
-        html = html.replace(/__PRODUCT_IMG__/g, imagePreview)
+      setLoadingStatus('이미지를 배치하고 있어요...')
 
-        // 2차: 마커가 없었으면 → 섹션에 강제 삽입
-        if (markerCount === 0) {
-          const imgHtml = `<div style="text-align:center;padding:30px 20px;"><img src="${imagePreview}" alt="${productName}" style="width:85%;max-height:450px;object-fit:contain;border-radius:16px;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.15));" /></div>`
-          // HERO 섹션(첫 section)에 삽입
-          const firstSection = html.match(/<section[^>]*>/i)
-          if (firstSection) {
-            const pos = html.indexOf(firstSection[0]) + firstSection[0].length
-            html = html.slice(0, pos) + imgHtml + html.slice(pos)
-          }
-          // 중간 섹션에도 삽입
-          const allSections = html.match(/<section[^>]*>/gi) || []
-          if (allSections.length >= 6) {
-            const midSection = allSections[Math.floor(allSections.length / 2)]
-            let searchFrom = html.indexOf(midSection, html.indexOf(firstSection![0]) + 100)
-            if (searchFrom > 0) {
-              searchFrom += midSection.length
-              html = html.slice(0, searchFrom) + imgHtml + html.slice(searchFrom)
-            }
-          }
-        }
-      } else {
-        html = html.replace(/__PRODUCT_IMG__/g,
-          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23f0f0f0'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='24' fill='%23ccc'%3EProduct%3C/text%3E%3C/svg%3E"
-        )
+      // ─── 2단계: 이미지 배치 ───
+      // AI 생성 이미지 수집
+      const aiImages: Record<string, string> = {}
+      if (imgRes.status === 'fulfilled' && imgRes.value.ok) {
+        const imgData = await imgRes.value.json()
+        Object.assign(aiImages, imgData.images || {})
+        console.log(`AI 이미지 ${imgData.generated}/${imgData.requested}장 생성 완료`)
       }
+
+      // 마커별로 다른 이미지 할당
+      // __HERO_IMG__ → hero AI 이미지 (없으면 원본)
+      // __TEXTURE_IMG__ → texture AI 이미지
+      // __LIFESTYLE_IMG__ → lifestyle AI 이미지
+      // __INGREDIENT_IMG__ → ingredient AI 이미지
+      // __PRODUCT_IMG__ → 원본 제품 사진
+      const heroImg = aiImages.hero || imagePreview || ''
+      const textureImg = aiImages.texture || imagePreview || ''
+      const lifestyleImg = aiImages.lifestyle || imagePreview || ''
+      const ingredientImg = aiImages.ingredient || imagePreview || ''
+
+      // 마커 교체 (AI가 특수 마커를 쓴 경우)
+      html = html.replace(/__HERO_IMG__/g, heroImg)
+      html = html.replace(/__TEXTURE_IMG__/g, textureImg)
+      html = html.replace(/__LIFESTYLE_IMG__/g, lifestyleImg)
+      html = html.replace(/__INGREDIENT_IMG__/g, ingredientImg)
+
+      // __PRODUCT_IMG__ 마커: 순서대로 다른 이미지 할당
+      const imageRotation = [
+        imagePreview || heroImg,   // 첫 번째: 원본 제품 사진
+        textureImg,                // 두 번째: 텍스처
+        lifestyleImg,              // 세 번째: 라이프스타일
+        ingredientImg,             // 네 번째: 성분
+      ].filter(Boolean)
+
+      let imgIdx = 0
+      const markerCount = (html.match(/__PRODUCT_IMG__/g) || []).length
+      if (markerCount > 0 && imageRotation.length > 0) {
+        html = html.replace(/__PRODUCT_IMG__/g, () => {
+          const src = imageRotation[imgIdx % imageRotation.length]
+          imgIdx++
+          return src
+        })
+      }
+
+      // 마커가 없었으면 → 섹션별 강제 삽입
+      if (markerCount === 0 && imageRotation.length > 0) {
+        const sections = html.match(/<section[^>]*>/gi) || []
+        // 삽입 위치: 1번(HERO), 4번(KEY VISUAL), 8번(BANNER), 필요시 더
+        const insertPositions = [0, 3, 7].filter(i => i < sections.length)
+
+        // 뒤에서부터 삽입해야 인덱스 안 꼬임
+        for (let p = insertPositions.length - 1; p >= 0; p--) {
+          const secIdx = insertPositions[p]
+          const imgSrc = imageRotation[p % imageRotation.length]
+          const imgHtml = `<div style="text-align:center;padding:24px 16px;"><img src="${imgSrc}" alt="${productName}" style="width:85%;max-height:420px;object-fit:contain;border-radius:16px;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.12));" /></div>`
+
+          let searchFrom = 0
+          for (let s = 0; s <= secIdx; s++) {
+            searchFrom = html.indexOf(sections[s], searchFrom)
+            if (s < secIdx) searchFrom += sections[s].length
+          }
+          const insertAt = searchFrom + sections[secIdx].length
+          html = html.slice(0, insertAt) + imgHtml + html.slice(insertAt)
+        }
+      }
+
+      // SVG 플레이스홀더 (이미지 아예 없는 경우)
+      html = html.replace(/__PRODUCT_IMG__|__HERO_IMG__|__TEXTURE_IMG__|__LIFESTYLE_IMG__|__INGREDIENT_IMG__/g,
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23f0f0f0'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='24' fill='%23ccc'%3EProduct%3C/text%3E%3C/svg%3E"
+      )
 
       setGeneratedHtml(html)
       setStep('preview')
@@ -149,11 +202,11 @@ export default function NewProjectPage() {
         </div>
         <div className="text-center">
           <p className="font-bold text-gray-800 text-lg">{loadingStatus}</p>
-          <p className="text-sm text-gray-400 mt-2">Gemini AI가 디자인 + 카피 + 레이아웃을 한번에 생성합니다</p>
-          <p className="text-xs text-gray-300 mt-1">약 15~30초 소요</p>
+          <p className="text-sm text-gray-400 mt-2">Gemini AI가 카피를, DALL-E가 섹션별 이미지를 동시에 생성합니다</p>
+          <p className="text-xs text-gray-300 mt-1">약 30~60초 소요</p>
         </div>
         <div className="flex gap-2">
-          {['이미지 분석', 'AI 디자인', '카피 작성', 'HTML 생성'].map((s, i) => (
+          {['카피 생성', 'AI 이미지', '레이아웃', '조립'].map((s, i) => (
             <div key={s} className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 animate-pulse"
               style={{ animationDelay: `${i * 0.3}s` }}>
               {s}
