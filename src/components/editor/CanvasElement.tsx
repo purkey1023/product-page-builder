@@ -137,13 +137,28 @@ export function CanvasElement({ element, sectionId, productImageUrl }: CanvasEle
       case 'image': {
         const el = element as ImageElement
         if (!resolvedSrc) {
-          // Placeholder for unloaded images
+          // AI 이미지 placeholder
+          const isGenerateMarker = el.src.startsWith('generate:')
           return (
             <div
-              className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-sm"
+              className={`w-full h-full flex flex-col items-center justify-center gap-2 ${
+                isGenerateMarker ? 'bg-purple-50 border-2 border-dashed border-purple-200' : 'bg-gray-100'
+              }`}
               style={{ borderRadius: el.borderRadius, opacity: el.opacity }}
             >
-              {el.src.startsWith('generate:') ? `AI 이미지 (${el.src.replace('generate:', '')})` : '이미지 없음'}
+              {isGenerateMarker ? (
+                <>
+                  <span className="text-purple-400 text-2xl">✨</span>
+                  <span className="text-purple-500 text-xs font-medium">
+                    AI 이미지 ({el.src.replace('generate:', '')})
+                  </span>
+                  <span className="text-purple-300 text-[10px]">
+                    클릭 후 오른쪽 패널에서 생성
+                  </span>
+                </>
+              ) : (
+                <span className="text-gray-400 text-sm">이미지 없음</span>
+              )}
             </div>
           )
         }
