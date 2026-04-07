@@ -65,24 +65,23 @@ Output 4-5 detailed sentences. Be extremely specific about colors and textures.`
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 2단계: 한국 뷰티 에디토리얼 수준 프롬프트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildPrompt(
+async function buildPrompt(
   style: string,
   analysis: string,
   productName: string,
   category: string,
   mood: string,
   sectionContext?: string
-): string {
-  // 공통 톤 지시: 밝고 따뜻한 한국 뷰티 화보 톤
+): Promise<string> {
+  // Gemini Imagen 최적화 공통 지시
   const TONE_GUIDE = `
-LIGHTING & TONE (CRITICAL — apply to ALL images):
-- Overall tone: BRIGHT, WARM, SOFT, AIRY — like a Korean beauty magazine editorial
-- Lighting: Soft natural window light or large diffused softbox. NO harsh shadows. NO dark moody lighting.
-- Color temperature: Warm (5500-6500K). Slightly warm beige/cream undertone throughout.
-- Background: Light, bright — warm beige (#F5F0EB), soft cream (#FFF8F0), or clean white. NEVER dark or black.
-- Exposure: Slightly bright/overexposed (+0.3~0.7 EV). Skin and surfaces should glow softly.
-- Reference: PEPTOIR, ANUA, Sulwhasoo Korean beauty advertisement — always bright, clean, warm, inviting.
-- AVOID: Dark backgrounds, dramatic shadows, cool blue tones, underexposed/moody looks.`
+[Lighting]: Soft studio lighting with large diffused softbox, or soft natural window sunlight. Warm color temperature (5500-6500K). NO harsh shadows.
+[Background]: Light warm beige (#F5F0EB), soft cream (#FFF8F0), or clean white. NEVER dark or black backgrounds.
+[Style]: High-end Korean beauty commercial photography. PEPTOIR, ANUA, Sulwhasoo advertisement quality.
+[Composition]: Clean, balanced, with generous negative space. Product/subject is the clear focal point.
+[Quality]: 4k resolution, highly detailed, professional lighting, commercial grade.
+[Exposure]: Slightly bright (+0.3~0.7 EV). Skin and surfaces should glow softly with dewy luminosity.
+[AVOID]: Dark backgrounds, dramatic shadows, cool blue tones, underexposed/moody looks, any text/logos/watermarks.`
 
   const moodStyle: Record<string, string> = {
     premium: 'Warm luxurious golden-beige tones, bright soft lighting, Sulwhasoo/PEPTOIR style, cream/gold palette on light background',
@@ -148,26 +147,74 @@ ${TONE_GUIDE}
 CRITICAL: NO objects, NO text, NO products. Bright warm gradient background only.`,
   }
 
-  let prompt = prompts[style] || prompts.texture
-
-  // 섹션 텍스트 컨텍스트 주입 — 이미지가 섹션 내용과 매칭되도록
-  if (sectionContext) {
-    prompt += `
-
-====== SECTION CONTEXT (VERY IMPORTANT — READ CAREFULLY) ======
-This image is placed in a product detail page section. The nearby text describes what this image should represent.
-
-${sectionContext}
-
-YOU MUST make the image match the above text content:
-- If it mentions specific INGREDIENTS (어성초=heartleaf, 히알루론산=hyaluronic acid, 비타민C=vitamin C, 나이아신아마이드=niacinamide, 펩타이드=peptide, 콜라겐=collagen, 레티놀=retinol, 세라마이드=ceramide, 녹차=green tea, 알로에=aloe vera, 프로폴리스=propolis), show those actual ingredients visually.
-- If it mentions EFFECTS (보습=hydrating→water/moisture, 진정=soothing→green/calm, 탄력=firming→golden/structured, 미백=brightening→bright/luminous, 주름=anti-wrinkle→smooth, 모공=pore→clean/refined), reflect that mood in colors and composition.
-- If it mentions TEXTURE (세럼=serum, 크림=cream, 젤=gel, 토너=toner, 오일=oil, 에센스=essence, 앰플=ampoule), show that exact texture type.
-- The CLOSEST text to the image is the most important — it directly describes what this image should show.
-================================================================`
+  // 컨텍스트가 있으면 Gemini로 맞춤 프롬프트 생성
+  if (sectionContext && GEMINI_API_KEY) {
+    const customPrompt = await buildContextualPrompt(sectionContext, analysis, productName, category, mood, style)
+    if (customPrompt) return customPrompt
   }
 
-  return prompt
+  return prompts[style] || prompts.texture
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Gemini가 텍스트 컨텍스트 기반 맞춤 프롬프트 생성
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function buildContextualPrompt(
+  sectionContext: string,
+  productAnalysis: string,
+  productName: string,
+  category: string,
+  mood: string,
+  style: string
+): Promise<string | null> {
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `You are an expert Korean beauty product photographer. Your job is to write an IMAGE GENERATION PROMPT that perfectly matches the nearby text content.
+
+PRODUCT: ${productName} (${category})
+PRODUCT APPEARANCE: ${productAnalysis}
+MOOD: ${mood}
+REQUESTED STYLE: ${style}
+
+SECTION TEXT CONTENT (this is what the image must represent):
+${sectionContext}
+
+Based on the section text above, write a detailed image generation prompt in English.
+
+RULES:
+1. The image MUST directly illustrate what the nearby text describes.
+   - "보습" (moisturizing) → show water drops on dewy skin, moisture texture
+   - "진정" (soothing) → show calming green botanical elements, cool tones
+   - "탄력/탄탄" (firming) → show firm smooth skin, structured golden textures
+   - "성분" (ingredients) → show actual botanical ingredients mentioned
+   - "사용 방법" (how to use) → show hands applying product on face/skin
+   - "리뷰/후기" → show a satisfied Korean woman with glowing skin
+   - "장점/효과" → show before/after feeling, the specific benefit visually
+2. LIGHTING: Bright, warm, soft (Korean beauty editorial style, like PEPTOIR/ANUA ads)
+3. BACKGROUND: Light warm beige or white. NEVER dark.
+4. NO text, logos, letters, watermarks in the image.
+5. Photorealistic, Canon/Sony camera quality.
+
+Output ONLY the image prompt (3-5 sentences). No explanation.` }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+      }),
+    })
+
+    if (!res.ok) return null
+    const result = await res.json()
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    if (text && text.length > 30) {
+      console.log(`[Contextual Prompt] ${text.slice(0, 150)}...`)
+      return text
+    }
+  } catch (err) {
+    console.log('[Contextual Prompt] error:', err)
+  }
+  return null
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -267,7 +314,7 @@ export async function POST(req: NextRequest) {
     const images: Record<string, string> = {}
 
     for (const style of styles) {
-      const prompt = buildPrompt(style, analysis, productName, category, mood, sectionContext)
+      const prompt = await buildPrompt(style, analysis, productName, category, mood, sectionContext)
       console.log(`[Image] ${style} 생성 중...`)
 
       const result = await generateImage(prompt)
