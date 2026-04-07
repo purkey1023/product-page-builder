@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useEditorStore, subscribeAutoSave } from '@/store/editorStore'
 import { saveProject } from '@/lib/supabase/projects'
 import { SectionList } from './SectionList'
-import { PreviewCanvas } from './PreviewCanvas'
+import { Canvas } from './Canvas'
 import { PropertyPanel } from './PropertyPanel'
 import { EditorHeader } from './EditorHeader'
 import type { Project } from '@/types'
@@ -15,7 +15,7 @@ interface EditorLayoutProps {
 
 export function EditorLayout({ project }: EditorLayoutProps) {
   const setProject = useEditorStore((s) => s.setProject)
-  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map())
+  const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const unsubRef = useRef<(() => void) | null>(null)
 
   // 초기 프로젝트 로드
@@ -23,7 +23,7 @@ export function EditorLayout({ project }: EditorLayoutProps) {
     setProject(project)
   }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 자동 저장 구독 (마운트 시 1회)
+  // 자동 저장 구독
   useEffect(() => {
     unsubRef.current = subscribeAutoSave(async (p) => {
       await saveProject(p)
@@ -33,20 +33,52 @@ export function EditorLayout({ project }: EditorLayoutProps) {
     }
   }, [])
 
-  // Ctrl+S 단축키 저장
+  // 키보드 단축키
   useEffect(() => {
     const handler = async (e: KeyboardEvent) => {
+      const store = useEditorStore.getState()
+
+      // Ctrl+S 저장
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
-        const { project: p, isSaving, setSaving, markClean } = useEditorStore.getState()
-        if (!p || isSaving) return
-        setSaving(true)
+        if (!store.project || store.isSaving) return
+        store.setSaving(true)
         try {
-          await saveProject(p)
-          markClean()
+          await saveProject(store.project)
+          store.markClean()
         } finally {
-          setSaving(false)
+          store.setSaving(false)
         }
+        return
+      }
+
+      // 텍스트 편집 중에는 다른 단축키 무시
+      if (store.editingTextId) return
+
+      // Delete/Backspace 요소 삭제
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (store.selectedElementId && store.selectedSectionId) {
+          e.preventDefault()
+          store.removeElement(store.selectedSectionId, store.selectedElementId)
+        }
+        return
+      }
+
+      // Ctrl+D 복제
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        if (store.selectedElementId && store.selectedSectionId) {
+          store.duplicateElement(store.selectedSectionId, store.selectedElementId)
+        } else if (store.selectedSectionId && !store.selectedElementId) {
+          store.duplicateSection(store.selectedSectionId)
+        }
+        return
+      }
+
+      // Escape 선택 해제
+      if (e.key === 'Escape') {
+        store.deselectAll()
+        return
       }
     }
     window.addEventListener('keydown', handler)
@@ -63,12 +95,10 @@ export function EditorLayout({ project }: EditorLayoutProps) {
           <SectionList />
         </aside>
 
-        {/* 중앙: 미리보기 */}
-        <main className="flex-1 overflow-auto bg-[#E8EAED] flex items-start justify-center py-8 px-4">
-          <PreviewCanvas sectionRefs={sectionRefs} />
-        </main>
+        {/* 중앙: 캔버스 */}
+        <Canvas sectionRefs={sectionRefs} />
 
-        {/* 우측: 속성 편집 */}
+        {/* 우측: 속성 패널 */}
         <aside className="w-[300px] flex-shrink-0 border-l bg-white overflow-y-auto">
           <PropertyPanel />
         </aside>

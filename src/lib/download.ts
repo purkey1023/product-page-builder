@@ -1,84 +1,117 @@
 import { toPng } from 'html-to-image'
-
-const EXPORT_WIDTH = 1080
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
+import { CANVAS_WIDTH } from '@/types'
 
 // ──────────────────────────────────────
-// 섹션 1개 PNG 다운로드
+// 섹션 1개 → PNG DataURL
 // ──────────────────────────────────────
-export async function downloadSection(
-  element: HTMLElement,
-  label: string
-): Promise<void> {
-  const scale = EXPORT_WIDTH / element.offsetWidth
+async function captureSection(element: HTMLDivElement): Promise<string> {
+  // Ensure fonts are loaded
+  await document.fonts.ready
 
-  const dataUrl = await toPng(element, {
-    pixelRatio: scale,
+  return toPng(element, {
+    width: CANVAS_WIDTH,
+    height: element.offsetHeight,
+    pixelRatio: 1, // 780px 정확한 출력
     quality: 0.95,
     skipFonts: false,
-    // 외부 이미지 CORS 문제 방지
     fetchRequestInit: { mode: 'cors' },
   })
-
-  triggerDownload(dataUrl, `${label}.png`)
 }
 
 // ──────────────────────────────────────
-// 전체 페이지 PNG 다운로드 (섹션 세로 합성)
+// 전체 섹션 → ZIP 다운로드
 // ──────────────────────────────────────
-export async function downloadFullPage(
-  elements: HTMLElement[],
-  projectName: string
+export async function exportAsZip(
+  sectionRefs: Map<string, HTMLDivElement>,
+  sectionOrder: { id: string; label: string }[],
+  projectName: string,
+  onProgress?: (current: number, total: number) => void
 ): Promise<void> {
-  if (elements.length === 0) return
+  const zip = new JSZip()
+  const total = sectionOrder.length
 
-  const scale = EXPORT_WIDTH / elements[0].offsetWidth
+  for (let i = 0; i < total; i++) {
+    const { id, label } = sectionOrder[i]
+    const el = sectionRefs.get(id)
+    if (!el) continue
 
-  // 각 섹션 → PNG DataURL
-  const dataUrls = await Promise.all(
-    elements.map((el) =>
-      toPng(el, {
-        pixelRatio: scale,
-        quality: 0.95,
-        fetchRequestInit: { mode: 'cors' },
-      })
-    )
-  )
+    onProgress?.(i + 1, total)
 
-  // Image 객체 로드
-  const images = await Promise.all(
-    dataUrls.map(
-      (url) =>
-        new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image()
-          img.onload = () => resolve(img)
-          img.onerror = reject
-          img.src = url
-        })
-    )
-  )
+    const dataUrl = await captureSection(el)
+    // dataUrl → base64 blob
+    const base64 = dataUrl.split(',')[1]
+    const num = String(i + 1).padStart(2, '0')
+    zip.file(`${num}_${label}.png`, base64, { base64: true })
+  }
 
-  // Canvas에 세로 합성
+  const blob = await zip.generateAsync({ type: 'blob' })
+  saveAs(blob, `${projectName}_이미지.zip`)
+}
+
+// ──────────────────────────────────────
+// 전체 세로 합성 PNG 다운로드
+// ──────────────────────────────────────
+export async function exportAsMergedImage(
+  sectionRefs: Map<string, HTMLDivElement>,
+  sectionOrder: { id: string; label: string }[],
+  projectName: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<void> {
+  const total = sectionOrder.length
+  const images: HTMLImageElement[] = []
+
+  for (let i = 0; i < total; i++) {
+    const { id } = sectionOrder[i]
+    const el = sectionRefs.get(id)
+    if (!el) continue
+
+    onProgress?.(i + 1, total)
+
+    const dataUrl = await captureSection(el)
+    const img = await loadImage(dataUrl)
+    images.push(img)
+  }
+
+  if (images.length === 0) return
+
   const totalHeight = images.reduce((sum, img) => sum + img.height, 0)
   const canvas = document.createElement('canvas')
-  canvas.width = EXPORT_WIDTH
+  canvas.width = CANVAS_WIDTH
   canvas.height = totalHeight
 
   const ctx = canvas.getContext('2d')!
   let y = 0
   for (const img of images) {
-    ctx.drawImage(img, 0, y, EXPORT_WIDTH, img.height)
+    ctx.drawImage(img, 0, y, CANVAS_WIDTH, img.height)
     y += img.height
   }
 
-  const finalUrl = canvas.toDataURL('image/png', 0.95)
-  triggerDownload(finalUrl, `${projectName}_상세페이지.png`)
+  canvas.toBlob((blob) => {
+    if (blob) saveAs(blob, `${projectName}_상세페이지.png`)
+  }, 'image/png')
 }
 
-function triggerDownload(dataUrl: string, filename: string): void {
-  const a = document.createElement('a')
-  a.download = filename
-  a.href = dataUrl
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+// ──────────────────────────────────────
+// 개별 섹션 다운로드
+// ──────────────────────────────────────
+export async function exportSingleSection(
+  element: HTMLDivElement,
+  filename: string
+): Promise<void> {
+  const dataUrl = await captureSection(element)
+  const base64 = dataUrl.split(',')[1]
+  const byteArr = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+  const blob = new Blob([byteArr], { type: 'image/png' })
+  saveAs(blob, filename)
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
 }

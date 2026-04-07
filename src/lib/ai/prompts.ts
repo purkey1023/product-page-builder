@@ -1,136 +1,139 @@
 import type { MoodType } from '@/types'
 
 // ──────────────────────────────────────
-// 분위기별 톤 + CRO 전략
+// 무드별 디자인 가이드
 // ──────────────────────────────────────
-const MOOD_TONE: Record<MoodType, string> = {
+const MOOD_GUIDE: Record<MoodType, string> = {
   premium: `
-- 톤: 격조 있고 신뢰감 있는 고급 문체. 수식어는 절제하되 임팩트 있게.
-- 카피 전략: 희소성("한정"), 전문성("피부과학"), 품질("엄선된 원료") 강조
-- 감성 키워드: "엄선된", "검증된", "오직 당신을 위한", "최상의", "프리미엄"
-- 숫자 활용: 구체적 임상 데이터, 만족도 수치 포함 (예: "피부 수분도 47% 향상")
-- 스토리텔링: 브랜드 철학, 장인정신, 원료 유래 이야기 포함`,
-
+색상: 배경 #0A0A0A/#1A1A1A 다크톤, 텍스트 #F5F0E8 크림, 포인트 #C9A96E 골드
+폰트: 영문 Playfair Display, 본문 Noto Sans KR, weight 300-400
+느낌: 고급스럽고 신뢰감, 넓은 여백, 세리프 제목, 어두운 배경 위 밝은 텍스트`,
   clean: `
-- 톤: 깔끔하고 직관적인 미니멀 문체. 핵심만 전달.
-- 카피 전략: 단순함의 가치, 불필요한 것을 뺀 본질 강조
-- 감성 키워드: "딱 필요한 것만", "군더더기 없는", "심플하지만 확실한"
-- 숫자 활용: 성분 개수, 사용 시간 등 간결한 수치 (예: "3가지 핵심 성분")
-- 스토리텔링: 미니멀 라이프스타일, 효율적 루틴 이야기`,
-
+색상: 배경 #FFFFFF/#F5F5F5, 텍스트 #1A1A1A, 포인트 #3B82F6 블루
+폰트: Noto Sans KR, weight 300-500
+느낌: 미니멀, 깔끔, 화이트 스페이스 충분, 직관적 레이아웃`,
   natural: `
-- 톤: 따뜻하고 자연스러운 친근한 문체. 공감과 안심 전달.
-- 카피 전략: 자연유래, 순한 성분, 일상의 편안함 강조
-- 감성 키워드: "자연이 준 선물", "매일 편안하게", "순한", "건강한 아름다움"
-- 숫자 활용: 천연 성분 비율, 유해성분 무첨가 수 (예: "자연유래 성분 97.2%")
-- 스토리텔링: 자연에서 영감, 건강한 일상, 가족 이야기`,
-
+색상: 배경 #FAF7F2/#EEF4EE 웜톤, 텍스트 #3D2B1F, 포인트 #6B8E5A 세이지그린
+폰트: Noto Sans KR, 부드러운 weight 400
+느낌: 자연스럽고 따뜻한, 둥근 모서리, 자연 소재 느낌`,
   impact: `
-- 톤: 강렬하고 설득력 있는 전환 중심 문체. 짧고 파워풀하게.
-- 카피 전략: Before→After 변화, 즉각적 효과, 차별점 강조
-- 감성 키워드: "단 하나로 해결", "확실한 차이", "지금 바로", "놀라운 변화"
-- 숫자 활용: 효과 수치 대담하게 (예: "72시간 지속", "2주만에 -3cm")
-- 스토리텔링: 고객 변화 스토리, 도전과 결과 이야기`,
+색상: 배경 #0D0D0D/#1A1A2E 다크, 텍스트 #FFFFFF, 포인트 #FF4444 레드
+폰트: Noto Sans KR, weight 600-800 볼드
+느낌: 강렬한 대비, 다이내믹, 눈에 띄는 타이포그래피`,
 }
 
 // ──────────────────────────────────────
-// 섹션별 작성 가이드 (강화판)
+// 구조화된 JSON 생성 프롬프트
 // ──────────────────────────────────────
-const SECTION_GUIDES = `
-## 섹션별 작성 규칙 (★ 중요: 각 필드의 글자수를 반드시 지켜주세요)
+export function buildGeneratePrompt(
+  productName: string,
+  category: string,
+  mood: MoodType,
+  keyPoints: string[]
+): string {
+  const moodGuide = MOOD_GUIDE[mood]
 
-1. hero (히어로 섹션) — 첫인상을 결정하는 핵심
-   - title: 소비자의 욕망이나 고민을 자극하는 강렬한 헤드라인 (15~25자)
-     예시: "하루만에 달라지는 피부결", "매일 아침이 달라집니다"
-   - body: 감성적이면서 구체적인 서브카피 (30~50자)
-     예시: "피부과 전문의가 3년간 연구한 모공 솔루션, 드디어 완성"
-   - highlight: 핵심 배지 문구 (5~10자, 예: "#모공제로", "BEST", "NEW", "97%만족")
-   - items: 빈 배열 []
+  return `당신은 ANUA 스타일의 한국 프리미엄 상세페이지 전문 디자이너입니다.
+780px 너비의 이미지 시퀀스 상세페이지를 위한 구조화된 JSON을 생성합니다.
 
-2. benefits (핵심 장점) — 구매 이유를 명확하게
-   - title: 호기심을 자극하는 섹션 제목 (10~20자)
-     예시: "이래서 다릅니다", "3가지 확실한 차이"
-   - body: "왜 이 제품이어야 하는지" 설득력 있는 2~3문장 (40~80자)
-   - highlight: 핵심 수치 데이터 (5~15자, 예: "만족도 97%", "3중 케어")
-   - items: 핵심 장점 3개, 각각 "성분/기능이 ~해서 ~효과" 형태 (각 15~30자)
-     예시: ["히알루론산이 수분을 끌어당겨 촉촉하게", "비타민C가 피부톤을 맑게", "나이아신아마이드가 모공을 조여줘"]
+[절대 규칙]
+• JSON만 출력하세요. 마크다운 코드블록이나 설명 텍스트 금지.
+• 제품명 "${productName}"을 절대 변경하지 마세요.
+• 모든 x, y, width, height는 px 단위 정수입니다.
+• 캔버스 너비는 780px입니다. 어떤 element도 x + width > 780 을 넘으면 안 됩니다.
+• 텍스트는 한국어 위주, 영문 소제목(UPPERCASE)을 섞어 사용하세요.
 
-3. features (성분/기능 상세) — 전문성과 신뢰 확보
-   - title: 성분/기술 강조 제목 (10~20자)
-   - body: 핵심 기술이나 성분의 차별점 설명 (50~100자). 소비자 언어로 번역.
-   - highlight: 대표 성분명 또는 기술명 (5~15자)
-   - items: 특징 3~4개, "성분명 — 효과 설명" 형태 (각 20~35자)
-     예시: ["제로모공 콤플렉스™ — 모공 속 피지를 녹여 매끈하게", "저분자 히알루론산 — 피부 깊숙이 수분 전달"]
+[제품 정보]
+제품명: ${productName}
+카테고리: ${category}
+핵심 소구: ${keyPoints.join(' / ')}
 
-4. target (추천 대상) — 공감과 동질감 유발
-   - title: "이런 분께 추천합니다" 형태 (10~20자)
-   - body: 타겟 고객의 고민을 대변하는 공감 문장 (30~60자)
-     예시: "화장이 무너지는 오후 2시가 두려우셨다면, 이제 걱정 놓으세요"
-   - highlight: 빈 문자열 ""
-   - items: 구체적 추천 대상 3~4개, "~하시는 분" (각 15~25자)
-     예시: ["모공이 넓어져 고민이신 분", "화장 지속력이 필요하신 분", "피부결 개선을 원하시는 분"]
+[디자인 무드] ${moodGuide}
 
-5. howto (사용 방법) — 간편함 어필
-   - title: "이렇게 사용하세요" 형태 (10~20자)
-   - body: 사용의 간편함을 강조하는 한 문장 (20~40자)
-   - highlight: 빈 문자열 ""
-   - items: 3~4단계 사용법, 동사로 시작 (각 15~25자)
-     예시: ["세안 후 토너로 피부를 정돈하세요", "2~3방울을 손에 덜어 얼굴 전체에 펴바르세요", "가볍게 두드려 흡수시키세요"]
+[타이포그래피 스케일]
+• 히어로 제목: fontSize 38-44, fontWeight 300, fontFamily "Noto Sans KR"
+• 영문 라벨: fontSize 12-14, fontWeight 300-400, fontFamily "Playfair Display", letterSpacing 3-4
+• 섹션 제목: fontSize 28-32, fontWeight 600
+• 본문: fontSize 15-17, fontWeight 400, lineHeight 1.6-1.8
+• 캡션: fontSize 12-13, 무드 색상의 muted 계열
 
-6. cta (구매 유도) — 마지막 설득
-   - title: 행동을 유도하는 강력한 한 줄 (15~30자)
-     예시: "지금 시작하면, 2주 후가 다릅니다", "이미 13만 명이 선택했습니다"
-   - body: 구매 결정을 도와주는 신뢰/혜택 문장 (30~60자)
-     예시: "지금 주문하시면 무료배송 + 미니어처 세트 증정"
-   - highlight: CTA 버튼 문구 (5~12자, 예: "지금 만나보기", "무료 체험하기")
-   - items: 빈 배열 []
-`
+[섹션 구성 — 반드시 8개 섹션 모두 포함]
 
-// ──────────────────────────────────────
-// 최종 프롬프트 빌더
-// ──────────────────────────────────────
-export function buildGeneratePrompt(params: {
-  productName: string
-  category: string
-  mood: MoodType
-  keyPoints: [string, string, string]
-}): string {
-  const { productName, category, mood, keyPoints } = params
+1. hero (height: 950-1050)
+   - 상단: 영문 브랜드 라벨 (14px, 가운데, letterSpacing 4)
+   - 중앙: 제품명 한글 대제목 (38-44px, 가운데)
+   - 서브카피 (16px, muted 색상)
+   - 제품 이미지: src="product", 가운데 배치, 큰 사이즈 (width 350-420)
+   - 하단: 핵심 키워드 배지 텍스트
 
-  return `당신은 연매출 100억 이상 한국 뷰티/생활용품 브랜드의 상세페이지 전문 카피라이터입니다.
-올리브영, 무신사, 29CM, 마켓컬리에서 실제 상위 1% 매출을 기록하는 수준의 상세페이지 카피를 작성합니다.
+2. benefits (height: 850-950)
+   - "KEY BENEFITS" 영문 라벨
+   - 핵심 장점 3개를 번호(01, 02, 03)와 함께 배치
+   - 각 장점: 번호 + 제목(bold) + 설명(1-2문장)
+   - 핵심 소구 "${keyPoints.join('", "')}" 기반으로 구체적 카피 작성
 
-━━━ 제품 정보 ━━━
-- 제품명: ${productName}
-- 카테고리: ${category}
-- 핵심 소구포인트:
-  1. ${keyPoints[0]}
-  2. ${keyPoints[1]}
-  3. ${keyPoints[2]}
+3. ingredients (height: 800-900)
+   - 좌: 이미지 src="generate:ingredient" (300x300 정도)
+   - 우: 성분명(bold) + 효과 설명
+   - 소비자 언어로 "~이/가 ~해서 ~한 효과" 형태
 
-━━━ 분위기 & 톤 가이드 (반드시 준수) ━━━
-${MOOD_TONE[mood]}
+4. texture (height: 650-750)
+   - 상단: 풀폭 이미지 src="generate:texture" (width 780, height 450-500)
+   - 하단: 텍스처 설명 텍스트 (가운데)
 
-━━━ 카피라이팅 핵심 원칙 ━━━
-• 문제-시간 앵커링: "화장이 무너지는 오후 2시" 같은 구체적 상황 묘사
-• 혜택 번역: 성분명만 쓰지 말고 "~해서 ~효과" 로 소비자 언어로 번역
-• 구체적 숫자: "98%의 사용자가 2주 만에 효과를 느꼈습니다" (AI가 합리적으로 생성)
-• 감성적 묘사: 제품 사용 순간의 경험을 오감으로 표현 (질감, 향, 느낌)
-• 소셜 프루프: "N만 명이 선택한", 별점, 리뷰 수 등 사회적 증거 포함
-• 핵심 메시지 1개: 전체 페이지가 하나의 메시지를 반복 강화
+5. howto (height: 750-850)
+   - "HOW TO USE" 라벨
+   - STEP 01/02/03 3단계
+   - 각 단계: 번호 + 설명, 가로 3열 배치 (x: 60/290/520, width: 200)
 
-${SECTION_GUIDES}
+6. specs (height: 550-650)
+   - "PRODUCT INFO" 라벨
+   - 용량, 제조국, 사용기한, 전성분 정보 (카테고리에 맞게 적절히 생성)
 
-━━━ 출력 형식 (중요: 반드시 이 JSON 구조만 출력) ━━━
+7. reviews (height: 650-750)
+   - "REVIEWS" 라벨
+   - 리뷰 카드 2개 (shape rect 배경 + text)
+   - 실제 느낌의 후기 작성
 
+8. cta (height: 450-550)
+   - 제품 이미지 src="product" (가운데, 작은 사이즈)
+   - CTA 카피 (구매 유도 문구)
+
+[element type 규칙]
+• text: content, fontSize, fontWeight, fontFamily, color, textAlign, lineHeight, letterSpacing
+• image: src ("product" | "generate:texture" | "generate:ingredient" | "generate:lifestyle")
+• shape: shapeType ("rect"|"circle"|"line"), backgroundColor, borderRadius
+
+[background 규칙]
+• type: "color" | "gradient"
+• value: hex 색상 또는 CSS linear-gradient 문자열
+• 섹션마다 배경색을 교대로 변화시켜 단조로움을 방지하세요
+
+[출력 형식 — 이 정확한 JSON 구조로 출력]
 {
   "sections": [
-    { "type": "hero",     "title": "", "body": "", "highlight": "", "items": [] },
-    { "type": "benefits", "title": "", "body": "", "highlight": "", "items": ["", "", ""] },
-    { "type": "features", "title": "", "body": "", "highlight": "", "items": ["", "", "", ""] },
-    { "type": "target",   "title": "", "body": "", "highlight": "", "items": ["", "", "", ""] },
-    { "type": "howto",    "title": "", "body": "", "highlight": "", "items": ["", "", ""] },
-    { "type": "cta",      "title": "", "body": "", "highlight": "", "items": [] }
+    {
+      "type": "hero",
+      "height": 1000,
+      "background": { "type": "color", "value": "#FAF7F2" },
+      "elements": [
+        {
+          "type": "text",
+          "content": "BRAND NAME",
+          "x": 0, "y": 80, "width": 780, "height": 30,
+          "fontSize": 14, "fontWeight": 300, "fontFamily": "Playfair Display",
+          "color": "#999999", "textAlign": "center", "letterSpacing": 4
+        },
+        {
+          "type": "image",
+          "src": "product",
+          "x": 190, "y": 300, "width": 400, "height": 500
+        }
+      ]
+    }
   ]
-}`
+}
+
+제품 "${productName}" (${category})에 맞는 전문적이고 구매를 유도하는 카피를 작성하세요.
+핵심 소구 포인트를 자연스럽게 녹여내세요.`
 }

@@ -1,133 +1,111 @@
 'use client'
 
 import { useEditorStore } from '@/store/editorStore'
-import type { Section, ImagePosition, ImageSizeType } from '@/types'
+import type { ImageElement } from '@/types'
 import { cn } from '@/lib/utils'
-import { Slider } from '@/components/ui/slider'
-
-const POSITIONS: { value: ImagePosition; label: string }[] = [
-  { value: 'center',     label: '중앙' },
-  { value: 'top',        label: '상단' },
-  { value: 'bottom',     label: '하단' },
-  { value: 'left',       label: '왼쪽' },
-  { value: 'right',      label: '오른쪽' },
-  { value: 'background', label: '배경' },
-]
-
-const SIZES: { value: ImageSizeType; label: string }[] = [
-  { value: 'sm',   label: '작게 (40%)' },
-  { value: 'md',   label: '보통 (60%)' },
-  { value: 'lg',   label: '크게 (80%)' },
-  { value: 'full', label: '꽉 차게' },
-]
 
 interface ImagePanelProps {
-  section: Section
+  element: ImageElement
+  sectionId: string
 }
 
-export function ImagePanel({ section }: ImagePanelProps) {
-  const updateContent = useEditorStore((s) => s.updateContent)
-  const { imageConfig } = section.content
+export function ImagePanel({ element, sectionId }: ImagePanelProps) {
+  const updateElement = useEditorStore((s) => s.updateElement)
 
-  const update = (patch: Partial<typeof imageConfig>) => {
-    updateContent(section.id, {
-      imageConfig: { ...imageConfig, ...patch },
-    })
+  const update = (patch: Partial<ImageElement>) => {
+    updateElement(sectionId, element.id, patch)
   }
 
   return (
-    <div className="space-y-5">
-      {/* 위치 */}
-      <Field label="이미지 위치">
-        <div className="grid grid-cols-3 gap-1">
-          {POSITIONS.map(({ value, label }) => (
+    <div className="space-y-4">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">이미지 설정</p>
+
+      {/* 이미지 소스 */}
+      <Field label="이미지 소스">
+        <div className="space-y-2">
+          <div className="flex gap-1">
             <button
-              key={value}
               className={cn(
-                'py-1.5 rounded-lg text-xs font-medium border transition-all',
-                imageConfig.position === value
+                'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                element.src === 'product'
                   ? 'bg-blue-500 text-white border-blue-500'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               )}
-              onClick={() => update({ position: value })}
+              onClick={() => update({ src: 'product' })}
             >
-              {label}
+              제품 사진
+            </button>
+            <button
+              className={cn(
+                'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                element.src !== 'product' && !element.src.startsWith('generate:')
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              )}
+              onClick={() => {
+                if (element.src === 'product' || element.src.startsWith('generate:')) {
+                  update({ src: '' })
+                }
+              }}
+            >
+              URL 직접 입력
+            </button>
+          </div>
+          {element.src !== 'product' && !element.src.startsWith('generate:') && (
+            <input
+              type="text"
+              className="w-full text-xs border rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              value={element.src}
+              onChange={(e) => update({ src: e.target.value })}
+              placeholder="이미지 URL 입력"
+            />
+          )}
+        </div>
+      </Field>
+
+      {/* Object Fit */}
+      <Field label="맞춤">
+        <div className="flex gap-1">
+          {(['contain', 'cover', 'fill'] as const).map((fit) => (
+            <button
+              key={fit}
+              className={cn(
+                'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                element.objectFit === fit
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              )}
+              onClick={() => update({ objectFit: fit })}
+            >
+              {fit === 'contain' ? '비율 맞춤' : fit === 'cover' ? '채우기' : '늘리기'}
             </button>
           ))}
         </div>
       </Field>
 
-      {/* 크기 (배경 제외) */}
-      {imageConfig.position !== 'background' && (
-        <Field label="이미지 크기">
-          <div className="grid grid-cols-2 gap-1">
-            {SIZES.map(({ value, label }) => (
-              <button
-                key={value}
-                className={cn(
-                  'py-1.5 rounded-lg text-xs font-medium border transition-all',
-                  imageConfig.size === value
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                )}
-                onClick={() => update({ size: value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </Field>
-      )}
-
-      {/* 확대/축소 */}
-      <Field label={`확대/축소 (${Math.round(imageConfig.scale * 100)}%)`}>
-        <Slider
-          min={50}
+      {/* Border Radius */}
+      <Field label={`모서리 둥글기 (${element.borderRadius}px)`}>
+        <input
+          type="range"
+          value={element.borderRadius}
+          onChange={(e) => update({ borderRadius: Number(e.target.value) })}
+          className="w-full"
+          min={0}
           max={200}
-          step={5}
-          value={[Math.round(imageConfig.scale * 100)]}
-          onValueChange={(val) => {
-            const v = Array.isArray(val) ? val[0] : val
-            update({ scale: (v ?? 100) / 100 })
-          }}
         />
       </Field>
 
-      {/* X 위치 조정 */}
-      <Field label={`좌우 이동 (${imageConfig.offsetX}px)`}>
-        <Slider
-          min={-150}
-          max={150}
-          step={5}
-          value={[imageConfig.offsetX]}
-          onValueChange={(val) => {
-            const v = Array.isArray(val) ? val[0] : val
-            update({ offsetX: v ?? 0 })
-          }}
+      {/* 투명도 */}
+      <Field label={`투명도 (${Math.round(element.opacity * 100)}%)`}>
+        <input
+          type="range"
+          value={element.opacity * 100}
+          onChange={(e) => update({ opacity: Number(e.target.value) / 100 })}
+          className="w-full"
+          min={0}
+          max={100}
         />
       </Field>
-
-      {/* Y 위치 조정 */}
-      <Field label={`상하 이동 (${imageConfig.offsetY}px)`}>
-        <Slider
-          min={-150}
-          max={150}
-          step={5}
-          value={[imageConfig.offsetY]}
-          onValueChange={(val) => {
-            const v = Array.isArray(val) ? val[0] : val
-            update({ offsetY: v ?? 0 })
-          }}
-        />
-      </Field>
-
-      {/* 초기화 버튼 */}
-      <button
-        className="w-full text-xs text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg py-2 transition-colors"
-        onClick={() => update({ scale: 1, offsetX: 0, offsetY: 0 })}
-      >
-        위치/크기 초기화
-      </button>
     </div>
   )
 }

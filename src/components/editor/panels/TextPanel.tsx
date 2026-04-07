@@ -1,115 +1,150 @@
 'use client'
 
 import { useEditorStore } from '@/store/editorStore'
-import type { Section } from '@/types'
-
-const LIST_SECTION_TYPES = ['benefits', 'features', 'target', 'howto']
+import type { TextElement } from '@/types'
+import { cn } from '@/lib/utils'
 
 interface TextPanelProps {
-  section: Section
+  element: TextElement
+  sectionId: string
 }
 
-export function TextPanel({ section }: TextPanelProps) {
-  const updateContent = useEditorStore((s) => s.updateContent)
-  const hasItems = LIST_SECTION_TYPES.includes(section.type)
+const FONT_FAMILIES = [
+  'Noto Sans KR',
+  'Playfair Display',
+  'Pretendard',
+  'sans-serif',
+  'serif',
+]
 
-  const handleItemChange = (index: number, value: string) => {
-    const newItems = [...section.content.items]
-    newItems[index] = value
-    updateContent(section.id, { items: newItems })
-  }
+export function TextPanel({ element, sectionId }: TextPanelProps) {
+  const updateElement = useEditorStore((s) => s.updateElement)
 
-  const handleAddItem = () => {
-    updateContent(section.id, { items: [...section.content.items, ''] })
-  }
-
-  const handleRemoveItem = (index: number) => {
-    const newItems = section.content.items.filter((_, i) => i !== index)
-    updateContent(section.id, { items: newItems })
+  const update = (patch: Partial<TextElement>) => {
+    updateElement(sectionId, element.id, patch)
   }
 
   return (
     <div className="space-y-4">
-      {/* 제목 */}
-      <Field label="제목">
-        <textarea
-          className="w-full text-sm border border-gray-200 rounded-lg p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 leading-relaxed"
-          rows={2}
-          value={section.content.title}
-          onChange={(e) => updateContent(section.id, { title: e.target.value })}
-          placeholder="섹션 제목"
-        />
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">텍스트 스타일</p>
+
+      {/* 폰트 패밀리 */}
+      <Field label="폰트">
+        <select
+          value={element.fontFamily}
+          onChange={(e) => update({ fontFamily: e.target.value })}
+          className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+        >
+          {FONT_FAMILIES.map((f) => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
       </Field>
 
-      {/* 본문 */}
-      <Field label="본문">
-        <textarea
-          className="w-full text-sm border border-gray-200 rounded-lg p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 leading-relaxed"
-          rows={3}
-          value={section.content.body}
-          onChange={(e) => updateContent(section.id, { body: e.target.value })}
-          placeholder="본문 텍스트"
-        />
-      </Field>
-
-      {/* 강조 문구 */}
-      <Field label="강조 문구">
-        <input
-          type="text"
-          className="w-full text-sm border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
-          value={section.content.highlight}
-          onChange={(e) => updateContent(section.id, { highlight: e.target.value })}
-          placeholder="배지 / 강조 키워드"
-        />
-      </Field>
-
-      {/* 항목 리스트 (장점, 특징, 대상, 방법) */}
-      {hasItems && (
-        <Field label="항목 목록">
-          <div className="space-y-2">
-            {section.content.items.map((item, i) => (
-              <div key={i} className="flex gap-1.5 items-center">
-                <span className="text-xs text-gray-400 w-4 text-center flex-shrink-0">
-                  {i + 1}
-                </span>
-                <input
-                  type="text"
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  value={item}
-                  onChange={(e) => handleItemChange(i, e.target.value)}
-                  placeholder={`항목 ${i + 1}`}
-                />
-                <button
-                  className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
-                  onClick={() => handleRemoveItem(i)}
-                  title="삭제"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {section.content.items.length < 6 && (
-              <button
-                className="w-full text-xs text-gray-400 hover:text-blue-500 border border-dashed border-gray-200 hover:border-blue-300 rounded-lg py-2 transition-colors"
-                onClick={handleAddItem}
-              >
-                + 항목 추가
-              </button>
-            )}
-          </div>
+      {/* 폰트 크기 + Weight */}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="크기">
+          <input
+            type="number"
+            value={element.fontSize}
+            onChange={(e) => update({ fontSize: Number(e.target.value) })}
+            className="w-full text-xs border rounded-lg px-2 py-1.5"
+            min={8}
+            max={120}
+          />
         </Field>
-      )}
+        <Field label="굵기">
+          <select
+            value={element.fontWeight}
+            onChange={(e) => update({ fontWeight: Number(e.target.value) })}
+            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+          >
+            {[100, 200, 300, 400, 500, 600, 700, 800, 900].map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {/* 색상 */}
+      <Field label="색상">
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={element.color}
+            onChange={(e) => update({ color: e.target.value })}
+            className="w-8 h-8 rounded border cursor-pointer"
+          />
+          <input
+            type="text"
+            value={element.color}
+            onChange={(e) => update({ color: e.target.value })}
+            className="flex-1 text-xs border rounded px-2 py-1.5 font-mono"
+          />
+        </div>
+      </Field>
+
+      {/* 정렬 */}
+      <Field label="정렬">
+        <div className="flex gap-1">
+          {(['left', 'center', 'right'] as const).map((align) => (
+            <button
+              key={align}
+              className={cn(
+                'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                element.textAlign === align
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              )}
+              onClick={() => update({ textAlign: align })}
+            >
+              {align === 'left' ? '왼쪽' : align === 'center' ? '가운데' : '오른쪽'}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* Line Height + Letter Spacing */}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="줄 간격">
+          <input
+            type="number"
+            value={element.lineHeight}
+            onChange={(e) => update({ lineHeight: Number(e.target.value) })}
+            className="w-full text-xs border rounded-lg px-2 py-1.5"
+            min={0.8}
+            max={3}
+            step={0.1}
+          />
+        </Field>
+        <Field label="자간">
+          <input
+            type="number"
+            value={element.letterSpacing}
+            onChange={(e) => update({ letterSpacing: Number(e.target.value) })}
+            className="w-full text-xs border rounded-lg px-2 py-1.5"
+            min={-5}
+            max={20}
+            step={0.5}
+          />
+        </Field>
+      </div>
+
+      {/* 텍스트 내용 */}
+      <Field label="내용">
+        <textarea
+          className="w-full text-sm border rounded-lg p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 leading-relaxed"
+          rows={4}
+          value={element.content}
+          onChange={(e) => update({ content: e.target.value })}
+          placeholder="텍스트 입력"
+        />
+      </Field>
     </div>
   )
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">

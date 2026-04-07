@@ -1,59 +1,76 @@
 // ============================================================
-// 핵심 타입 정의
+// 핵심 타입 정의 - Element-based Canvas System
 // ============================================================
 
+// ──────────────────────────────────────
+// 기본 타입
+// ──────────────────────────────────────
 export type MoodType = 'premium' | 'clean' | 'natural' | 'impact'
 
 export type SectionType =
   | 'hero'
   | 'benefits'
-  | 'features'
-  | 'target'
+  | 'ingredients'
+  | 'texture'
   | 'howto'
+  | 'specs'
+  | 'reviews'
   | 'cta'
 
-export type ImagePosition =
-  | 'center'
-  | 'left'
-  | 'right'
-  | 'top'
-  | 'bottom'
-  | 'background'
-
-export type TextAlign = 'left' | 'center' | 'right'
-export type PaddingSize = 'sm' | 'md' | 'lg'
-export type ImageSizeType = 'sm' | 'md' | 'lg' | 'full'
+export type ElementType = 'text' | 'image' | 'shape'
 
 // ──────────────────────────────────────
-// 제품 이미지 설정
+// Element 타입들
 // ──────────────────────────────────────
-export interface ImageConfig {
-  position: ImagePosition
-  size: ImageSizeType   // sm=40% / md=60% / lg=80% / full=100%
-  scale: number         // 0.5 ~ 2.0
-  offsetX: number       // px 단위, -200 ~ 200
-  offsetY: number       // px 단위, -200 ~ 200
+interface BaseElement {
+  id: string
+  type: ElementType
+  x: number
+  y: number
+  width: number
+  height: number
+  opacity: number
+  rotation: number
+  locked: boolean
 }
 
-// ──────────────────────────────────────
-// 섹션 콘텐츠 (AI 생성 + 사용자 편집)
-// ──────────────────────────────────────
-export interface SectionContent {
-  title: string
-  body: string
-  highlight: string     // 강조 배지/태그 문구
-  items: string[]       // 장점 목록, 사용 순서 등
-  imageConfig: ImageConfig
+export interface TextElement extends BaseElement {
+  type: 'text'
+  content: string
+  fontSize: number
+  fontWeight: number
+  fontFamily: string
+  color: string
+  textAlign: 'left' | 'center' | 'right'
+  lineHeight: number
+  letterSpacing: number
 }
 
+export interface ImageElement extends BaseElement {
+  type: 'image'
+  src: string // 'product' | supabase URL | 'generate:texture' etc.
+  objectFit: 'contain' | 'cover' | 'fill'
+  borderRadius: number
+}
+
+export interface ShapeElement extends BaseElement {
+  type: 'shape'
+  shapeType: 'rect' | 'circle' | 'line' | 'badge'
+  backgroundColor: string
+  borderColor: string
+  borderWidth: number
+  borderRadius: number
+}
+
+export type SectionElement = TextElement | ImageElement | ShapeElement
+
 // ──────────────────────────────────────
-// 섹션 스타일
+// 섹션 배경
 // ──────────────────────────────────────
-export interface SectionStyle {
-  backgroundColor: string  // hex
-  textColor: string        // hex
-  padding: PaddingSize
-  textAlign: TextAlign
+export interface SectionBackground {
+  type: 'color' | 'gradient' | 'image'
+  value: string // hex color, CSS gradient, or image URL
+  overlay?: string // optional rgba overlay for image backgrounds
 }
 
 // ──────────────────────────────────────
@@ -62,10 +79,11 @@ export interface SectionStyle {
 export interface Section {
   id: string
   type: SectionType
-  label: string         // UI 표시용: "히어로", "핵심 장점" 등
+  label: string
   order: number
-  content: SectionContent
-  style: SectionStyle
+  height: number
+  background: SectionBackground
+  elements: SectionElement[]
   isVisible: boolean
 }
 
@@ -77,8 +95,8 @@ export interface ProductInfo {
   category: string
   mood: MoodType
   keyPoints: [string, string, string]
-  imageUrl: string      // Supabase Storage public URL
-  imagePath: string     // Storage 경로 (삭제 시 사용)
+  imageUrl: string
+  imagePath: string
 }
 
 // ──────────────────────────────────────
@@ -90,7 +108,7 @@ export interface Project {
   name: string
   product: ProductInfo
   sections: Section[]
-  createdAt: string     // ISO string
+  createdAt: string
   updatedAt: string
 }
 
@@ -117,17 +135,45 @@ export interface ProjectFormValues {
 }
 
 // ──────────────────────────────────────
-// AI 응답 구조
+// AI 응답 구조 (Claude JSON)
 // ──────────────────────────────────────
-export interface GeneratedSection {
+export interface GeneratedElementData {
+  type: ElementType
+  content?: string
+  src?: string
+  shapeType?: string
+  x: number
+  y: number
+  width: number
+  height: number
+  fontSize?: number
+  fontWeight?: number
+  fontFamily?: string
+  color?: string
+  textAlign?: 'left' | 'center' | 'right'
+  lineHeight?: number
+  letterSpacing?: number
+  objectFit?: 'contain' | 'cover' | 'fill'
+  borderRadius?: number
+  backgroundColor?: string
+  borderColor?: string
+  borderWidth?: number
+  opacity?: number
+}
+
+export interface GeneratedSectionData {
   type: SectionType
-  title: string
-  body: string
-  highlight: string
-  items: string[]
+  height: number
+  background: SectionBackground
+  elements: GeneratedElementData[]
 }
 
 export interface GenerateApiResponse {
-  sections: GeneratedSection[]
+  sections: GeneratedSectionData[]
   error?: string
 }
+
+// ──────────────────────────────────────
+// 캔버스 상수
+// ──────────────────────────────────────
+export const CANVAS_WIDTH = 780

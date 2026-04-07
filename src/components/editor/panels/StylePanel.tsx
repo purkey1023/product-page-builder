@@ -1,14 +1,14 @@
 'use client'
 
 import { useEditorStore } from '@/store/editorStore'
-import type { Section, TextAlign, PaddingSize } from '@/types'
+import type { Section } from '@/types'
 import { cn } from '@/lib/utils'
 
-// 분위기별 추천 색상 팔레트
 const COLOR_PRESETS = [
-  '#0A0A0A', '#1A1A1A', '#FFFFFF', '#F8F8F8', '#F5F5F5',
-  '#F7F3ED', '#EEF4EE', '#FBF8F3', '#1A1A2E', '#0F3460',
-  '#C9A96E', '#5C7C5C', '#E8272A', '#2563EB', '#7C3AED',
+  '#FFFFFF', '#F8F8F8', '#F5F5F5', '#FAF7F2', '#EEF4EE',
+  '#F0EBE3', '#FBF8F3', '#E8EAED', '#1A1A1A', '#0A0A0A',
+  '#0D0D0D', '#1A1A2E', '#C9A96E', '#5C7C5C', '#5BA4A4',
+  '#3B82F6', '#6B8E5A', '#E8272A', '#FF4444', '#7C3AED',
 ]
 
 interface StylePanelProps {
@@ -16,79 +16,109 @@ interface StylePanelProps {
 }
 
 export function StylePanel({ section }: StylePanelProps) {
-  const updateStyle = useEditorStore((s) => s.updateStyle)
+  const updateSectionBackground = useEditorStore((s) => s.updateSectionBackground)
+  const updateSectionHeight = useEditorStore((s) => s.updateSectionHeight)
+  const { background } = section
 
   return (
     <div className="space-y-5">
-      {/* 배경색 */}
-      <Field label="배경색">
-        <ColorPicker
-          value={section.style.backgroundColor}
-          onChange={(v) => updateStyle(section.id, { backgroundColor: v })}
-        />
-      </Field>
-
-      {/* 텍스트색 */}
-      <Field label="텍스트 색상">
-        <ColorPicker
-          value={section.style.textColor}
-          onChange={(v) => updateStyle(section.id, { textColor: v })}
-        />
-      </Field>
-
-      {/* 텍스트 정렬 */}
-      <Field label="텍스트 정렬">
+      {/* 배경 타입 */}
+      <Field label="배경 타입">
         <div className="flex gap-1">
-          {(['left', 'center', 'right'] as TextAlign[]).map((align) => (
+          {(['color', 'gradient', 'image'] as const).map((t) => (
             <button
-              key={align}
+              key={t}
               className={cn(
                 'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                section.style.textAlign === align
+                background.type === t
                   ? 'bg-blue-500 text-white border-blue-500'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               )}
-              onClick={() => updateStyle(section.id, { textAlign: align })}
+              onClick={() => updateSectionBackground(section.id, { type: t })}
             >
-              {align === 'left' ? '왼쪽' : align === 'center' ? '가운데' : '오른쪽'}
+              {t === 'color' ? '단색' : t === 'gradient' ? '그라데이션' : '이미지'}
             </button>
           ))}
         </div>
       </Field>
 
-      {/* 여백 */}
-      <Field label="내부 여백">
-        <div className="flex gap-1">
-          {(['sm', 'md', 'lg'] as PaddingSize[]).map((p) => (
-            <button
-              key={p}
-              className={cn(
-                'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                section.style.padding === p
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-              )}
-              onClick={() => updateStyle(section.id, { padding: p })}
-            >
-              {p === 'sm' ? '좁게' : p === 'md' ? '보통' : '넓게'}
-            </button>
-          ))}
-        </div>
+      {/* 배경 값 */}
+      {background.type === 'color' && (
+        <Field label="배경색">
+          <ColorPicker
+            value={background.value}
+            onChange={(v) => updateSectionBackground(section.id, { value: v })}
+          />
+        </Field>
+      )}
+
+      {background.type === 'gradient' && (
+        <Field label="그라데이션">
+          <input
+            type="text"
+            className="w-full text-xs border rounded-lg px-2.5 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+            value={background.value}
+            onChange={(e) => updateSectionBackground(section.id, { value: e.target.value })}
+            placeholder="linear-gradient(180deg, #FAF7F2 0%, #FFFFFF 100%)"
+          />
+          <div
+            className="mt-2 w-full h-12 rounded-lg border"
+            style={{ background: background.value }}
+          />
+        </Field>
+      )}
+
+      {background.type === 'image' && (
+        <Field label="이미지 URL">
+          <input
+            type="text"
+            className="w-full text-xs border rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            value={background.value}
+            onChange={(e) => updateSectionBackground(section.id, { value: e.target.value })}
+            placeholder="https://..."
+          />
+          {background.value && (
+            <img
+              src={background.value}
+              alt=""
+              className="mt-2 w-full h-20 object-cover rounded-lg border"
+            />
+          )}
+        </Field>
+      )}
+
+      {/* 오버레이 (이미지 배경용) */}
+      {background.type === 'image' && (
+        <Field label="오버레이">
+          <input
+            type="text"
+            className="w-full text-xs border rounded-lg px-2.5 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+            value={background.overlay ?? ''}
+            onChange={(e) => updateSectionBackground(section.id, { overlay: e.target.value })}
+            placeholder="rgba(0,0,0,0.3)"
+          />
+        </Field>
+      )}
+
+      {/* 섹션 높이 */}
+      <Field label={`섹션 높이 (${section.height}px)`}>
+        <input
+          type="number"
+          value={section.height}
+          onChange={(e) => updateSectionHeight(section.id, Number(e.target.value))}
+          className="w-full text-xs border rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          min={200}
+          max={2000}
+          step={10}
+        />
       </Field>
     </div>
   )
 }
 
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (v: string) => void
-}) {
+function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="space-y-2">
-      {/* 직접 입력 */}
       <div className="flex gap-2 items-center">
         <div
           className="w-8 h-8 rounded-md border border-gray-200 flex-shrink-0"
@@ -96,7 +126,7 @@ function ColorPicker({
         />
         <input
           type="text"
-          className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="flex-1 text-xs border rounded-lg px-2 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#000000"
@@ -104,13 +134,10 @@ function ColorPicker({
         <input
           type="color"
           className="w-8 h-8 rounded cursor-pointer border-0 p-0"
-          value={value}
+          value={value.startsWith('#') ? value : '#000000'}
           onChange={(e) => onChange(e.target.value)}
-          title="색상 선택"
         />
       </div>
-
-      {/* 프리셋 팔레트 */}
       <div className="flex flex-wrap gap-1.5">
         {COLOR_PRESETS.map((color) => (
           <button
@@ -129,13 +156,7 @@ function ColorPicker({
   )
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">

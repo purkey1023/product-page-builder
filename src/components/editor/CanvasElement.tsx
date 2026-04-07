@@ -1,0 +1,222 @@
+'use client'
+
+import { useCallback, useMemo } from 'react'
+import { Rnd } from 'react-rnd'
+import { useEditorStore } from '@/store/editorStore'
+import type { SectionElement, TextElement, ImageElement, ShapeElement } from '@/types'
+
+interface CanvasElementProps {
+  element: SectionElement
+  sectionId: string
+  productImageUrl: string
+}
+
+export function CanvasElement({ element, sectionId, productImageUrl }: CanvasElementProps) {
+  const selectedElementId = useEditorStore((s) => s.selectedElementId)
+  const editingTextId = useEditorStore((s) => s.editingTextId)
+  const selectElement = useEditorStore((s) => s.selectElement)
+  const moveElement = useEditorStore((s) => s.moveElement)
+  const resizeElement = useEditorStore((s) => s.resizeElement)
+  const startTextEditing = useEditorStore((s) => s.startTextEditing)
+  const updateElement = useEditorStore((s) => s.updateElement)
+  const stopTextEditing = useEditorStore((s) => s.stopTextEditing)
+
+  const isSelected = selectedElementId === element.id
+  const isEditing = editingTextId === element.id
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      selectElement(sectionId, element.id)
+    },
+    [sectionId, element.id, selectElement]
+  )
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (element.type === 'text') {
+        startTextEditing(element.id)
+      }
+    },
+    [element.id, element.type, startTextEditing]
+  )
+
+  const handleDragStop = useCallback(
+    (_e: unknown, d: { x: number; y: number }) => {
+      moveElement(sectionId, element.id, Math.round(d.x), Math.round(d.y))
+    },
+    [sectionId, element.id, moveElement]
+  )
+
+  const handleResizeStop = useCallback(
+    (_e: unknown, _dir: unknown, ref: HTMLElement, _delta: unknown, pos: { x: number; y: number }) => {
+      resizeElement(
+        sectionId,
+        element.id,
+        Math.round(ref.offsetWidth),
+        Math.round(ref.offsetHeight),
+        Math.round(pos.x),
+        Math.round(pos.y)
+      )
+    },
+    [sectionId, element.id, resizeElement]
+  )
+
+  // Resolve image src
+  const resolvedSrc = useMemo(() => {
+    if (element.type !== 'image') return ''
+    const el = element as ImageElement
+    if (el.src === 'product') return productImageUrl
+    if (el.src.startsWith('generate:')) {
+      // Placeholder for AI-generated images not yet loaded
+      return ''
+    }
+    return el.src
+  }, [element, productImageUrl])
+
+  const renderContent = () => {
+    switch (element.type) {
+      case 'text': {
+        const el = element as TextElement
+        if (isEditing) {
+          return (
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              className="outline-none w-full h-full cursor-text"
+              style={{
+                fontSize: el.fontSize,
+                fontWeight: el.fontWeight,
+                fontFamily: el.fontFamily,
+                color: el.color,
+                textAlign: el.textAlign,
+                lineHeight: el.lineHeight,
+                letterSpacing: el.letterSpacing,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                opacity: el.opacity,
+              }}
+              onBlur={(e) => {
+                const text = e.currentTarget.innerText
+                updateElement(sectionId, element.id, { content: text })
+                stopTextEditing()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.currentTarget.blur()
+                }
+              }}
+              autoFocus
+              dangerouslySetInnerHTML={{ __html: el.content.replace(/\n/g, '<br>') }}
+            />
+          )
+        }
+        return (
+          <div
+            className="w-full h-full pointer-events-none select-none"
+            style={{
+              fontSize: el.fontSize,
+              fontWeight: el.fontWeight,
+              fontFamily: el.fontFamily,
+              color: el.color,
+              textAlign: el.textAlign,
+              lineHeight: el.lineHeight,
+              letterSpacing: el.letterSpacing,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              opacity: el.opacity,
+              overflow: 'hidden',
+            }}
+          >
+            {el.content}
+          </div>
+        )
+      }
+
+      case 'image': {
+        const el = element as ImageElement
+        if (!resolvedSrc) {
+          // Placeholder for unloaded images
+          return (
+            <div
+              className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-sm"
+              style={{ borderRadius: el.borderRadius, opacity: el.opacity }}
+            >
+              {el.src.startsWith('generate:') ? `AI 이미지 (${el.src.replace('generate:', '')})` : '이미지 없음'}
+            </div>
+          )
+        }
+        return (
+          <img
+            src={resolvedSrc}
+            alt=""
+            className="pointer-events-none"
+            crossOrigin="anonymous"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: el.objectFit,
+              borderRadius: el.borderRadius,
+              opacity: el.opacity,
+            }}
+          />
+        )
+      }
+
+      case 'shape': {
+        const el = element as ShapeElement
+        return (
+          <div
+            className="w-full h-full pointer-events-none"
+            style={{
+              backgroundColor: el.backgroundColor,
+              borderRadius: el.shapeType === 'circle' ? '50%' : el.borderRadius,
+              border: el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none',
+              opacity: el.opacity,
+            }}
+          />
+        )
+      }
+    }
+  }
+
+  return (
+    <Rnd
+      position={{ x: element.x, y: element.y }}
+      size={{ width: element.width, height: element.height }}
+      onDragStop={handleDragStop}
+      onResizeStop={handleResizeStop}
+      bounds="parent"
+      disableDragging={element.locked || isEditing}
+      enableResizing={isSelected && !element.locked && !isEditing}
+      minWidth={20}
+      minHeight={10}
+      style={{ zIndex: isSelected ? 100 : 1 }}
+      resizeHandleStyles={{
+        topLeft: handleStyle,
+        topRight: handleStyle,
+        bottomLeft: handleStyle,
+        bottomRight: handleStyle,
+      }}
+    >
+      <div
+        className={`w-full h-full ${
+          isSelected && !isEditing ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+        } ${isEditing ? 'ring-2 ring-green-500 ring-offset-1' : ''}`}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+      >
+        {renderContent()}
+      </div>
+    </Rnd>
+  )
+}
+
+const handleStyle: React.CSSProperties = {
+  width: 8,
+  height: 8,
+  background: '#3B82F6',
+  borderRadius: '50%',
+  border: '1.5px solid white',
+}
