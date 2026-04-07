@@ -1,5 +1,7 @@
 'use client'
 
+import { useRef } from 'react'
+import { Upload } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
 import type { ImageElement } from '@/types'
 import { cn } from '@/lib/utils'
@@ -11,23 +13,69 @@ interface ImagePanelProps {
 
 export function ImagePanel({ element, sectionId }: ImagePanelProps) {
   const updateElement = useEditorStore((s) => s.updateElement)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const update = (patch: Partial<ImageElement>) => {
     updateElement(sectionId, element.id, patch)
   }
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      update({ src: reader.result as string })
+    }
+    reader.readAsDataURL(file)
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }
+
+  const isLocalFile = element.src.startsWith('data:')
+  const isProduct = element.src === 'product'
+  const isGenerate = element.src.startsWith('generate:')
+  const isUrl = !isProduct && !isGenerate && !isLocalFile && element.src.length > 0
+
   return (
     <div className="space-y-4">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">이미지 설정</p>
 
+      {/* 이미지 미리보기 */}
+      {(isLocalFile || isUrl) && (
+        <div className="border rounded-lg overflow-hidden bg-gray-50">
+          <img
+            src={element.src}
+            alt=""
+            className="w-full h-32 object-contain"
+          />
+        </div>
+      )}
+
       {/* 이미지 소스 */}
       <Field label="이미지 소스">
         <div className="space-y-2">
+          {/* 로컬 파일 업로드 버튼 */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-500 hover:text-blue-600 transition-all text-xs font-medium"
+          >
+            <Upload size={14} />
+            로컬 이미지 업로드
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          {/* 소스 타입 버튼 */}
           <div className="flex gap-1">
             <button
               className={cn(
                 'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                element.src === 'product'
+                isProduct
                   ? 'bg-blue-500 text-white border-blue-500'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               )}
@@ -38,27 +86,39 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
             <button
               className={cn(
                 'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                element.src !== 'product' && !element.src.startsWith('generate:')
+                isUrl
                   ? 'bg-blue-500 text-white border-blue-500'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               )}
               onClick={() => {
-                if (element.src === 'product' || element.src.startsWith('generate:')) {
-                  update({ src: '' })
-                }
+                if (!isUrl) update({ src: '' })
               }}
             >
-              URL 직접 입력
+              URL 입력
             </button>
           </div>
-          {element.src !== 'product' && !element.src.startsWith('generate:') && (
+
+          {/* URL 입력 필드 */}
+          {(isUrl || (!isProduct && !isGenerate && !isLocalFile)) && !isLocalFile && (
             <input
               type="text"
               className="w-full text-xs border rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              value={element.src}
+              value={isLocalFile ? '' : element.src}
               onChange={(e) => update({ src: e.target.value })}
-              placeholder="이미지 URL 입력"
+              placeholder="https:// 이미지 URL 입력"
             />
+          )}
+
+          {/* 현재 소스 상태 표시 */}
+          {isLocalFile && (
+            <div className="text-xs text-green-600 flex items-center gap-1">
+              ✓ 로컬 이미지 업로드됨
+            </div>
+          )}
+          {isGenerate && (
+            <div className="text-xs text-gray-400">
+              AI 생성 이미지: {element.src.replace('generate:', '')}
+            </div>
           )}
         </div>
       </Field>

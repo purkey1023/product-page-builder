@@ -9,12 +9,15 @@ export type MoodType = 'premium' | 'clean' | 'natural' | 'impact'
 
 export type SectionType =
   | 'hero'
+  | 'philosophy'
   | 'benefits'
   | 'ingredients'
   | 'texture'
+  | 'proof'
   | 'howto'
-  | 'specs'
+  | 'banner'
   | 'reviews'
+  | 'specs'
   | 'cta'
 
 export type ElementType = 'text' | 'image' | 'shape'

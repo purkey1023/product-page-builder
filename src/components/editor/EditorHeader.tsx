@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useEditorStore } from '@/store/editorStore'
 import { saveProject } from '@/lib/supabase/projects'
@@ -23,6 +23,8 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
   const addShapeElement = useEditorStore((s) => s.addShapeElement)
   const [exportOpen, setExportOpen] = useState(false)
   const [showShapeMenu, setShowShapeMenu] = useState(false)
+  const [showImageMenu, setShowImageMenu] = useState(false)
+  const imageFileRef = useRef<HTMLInputElement>(null)
 
   const handleManualSave = async () => {
     if (!project || isSaving) return
@@ -71,14 +73,46 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
           >
             <Type size={13} /> 텍스트
           </button>
-          <button
-            onClick={() => canAdd && addImageElement(selectedSectionId!, 'product')}
-            disabled={!canAdd}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            title="이미지 추가"
-          >
-            <ImageIcon size={13} /> 이미지
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => canAdd && setShowImageMenu(!showImageMenu)}
+              disabled={!canAdd}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              title="이미지 추가"
+            >
+              <ImageIcon size={13} /> 이미지
+            </button>
+            {showImageMenu && canAdd && (
+              <div className="absolute top-full mt-1 left-0 bg-white border rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                <button
+                  onClick={() => { addImageElement(selectedSectionId!, 'product'); setShowImageMenu(false) }}
+                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition flex items-center gap-2"
+                >
+                  <ImageIcon size={12} /> 제품 사진
+                </button>
+                <button
+                  onClick={() => { imageFileRef.current?.click(); setShowImageMenu(false) }}
+                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition flex items-center gap-2"
+                >
+                  <Upload size={12} /> 로컬 파일 업로드
+                </button>
+              </div>
+            )}
+            <input
+              ref={imageFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file || !selectedSectionId) return
+                const reader = new FileReader()
+                reader.onload = () => { addImageElement(selectedSectionId!, reader.result as string) }
+                reader.readAsDataURL(file)
+                e.target.value = ''
+              }}
+            />
+          </div>
           <div className="relative">
             <button
               onClick={() => {
