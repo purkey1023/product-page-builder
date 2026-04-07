@@ -1,5 +1,7 @@
 'use client'
 
+import { useRef } from 'react'
+import { Upload } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
 import type { Section } from '@/types'
 import { cn } from '@/lib/utils'
@@ -18,7 +20,19 @@ interface StylePanelProps {
 export function StylePanel({ section }: StylePanelProps) {
   const updateSectionBackground = useEditorStore((s) => s.updateSectionBackground)
   const updateSectionHeight = useEditorStore((s) => s.updateSectionHeight)
+  const bgFileRef = useRef<HTMLInputElement>(null)
   const { background } = section
+
+  const handleBgFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      updateSectionBackground(section.id, { type: 'image', value: reader.result as string })
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   return (
     <div className="space-y-5">
@@ -69,14 +83,31 @@ export function StylePanel({ section }: StylePanelProps) {
       )}
 
       {background.type === 'image' && (
-        <Field label="이미지 URL">
+        <Field label="배경 이미지">
+          {/* 로컬 파일 업로드 */}
+          <button
+            onClick={() => bgFileRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-500 hover:text-blue-600 transition-all text-xs font-medium mb-2"
+          >
+            <Upload size={14} />
+            로컬 이미지 업로드
+          </button>
+          <input
+            ref={bgFileRef}
+            type="file"
+            accept="image/*"
+            onChange={handleBgFileUpload}
+            className="hidden"
+          />
+          {/* URL 입력 */}
           <input
             type="text"
             className="w-full text-xs border rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            value={background.value}
+            value={background.value.startsWith('data:') ? '' : background.value}
             onChange={(e) => updateSectionBackground(section.id, { value: e.target.value })}
-            placeholder="https://..."
+            placeholder="또는 이미지 URL 입력"
           />
+          {/* 미리보기 */}
           {background.value && (
             <img
               src={background.value}

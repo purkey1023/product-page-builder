@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
+const GEMINI_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`
 
 interface GenerateImageRequest {
   productName: string
   category: string
   mood: string
-  styles: string[]  // 여러 스타일 한번에 요청
+  styles: string[]
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -26,32 +28,37 @@ async function generateOneImage(productName: string, category: string, mood: str
   }
 
   const stylePrompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.hero
-  const prompt = `${stylePrompt} Product type: ${productName} (${category}). Color mood: ${moodMap[mood] || 'modern elegant'}. IMPORTANT: No text, no letters, no logos, no labels, no watermarks anywhere in the image.`
+  const prompt = `Generate an image: ${stylePrompt} Product type: ${productName} (${category}). Color mood: ${moodMap[mood] || 'modern elegant'}. IMPORTANT: No text, no letters, no logos, no labels, no watermarks anywhere in the image.`
 
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
+  const response = await fetch(GEMINI_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'dall-e-3',
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-      response_format: 'b64_json',
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
     }),
   })
 
   if (!response.ok) {
     const errBody = await response.text()
-    console.error(`[DALL-E ${style}]`, response.status, errBody.slice(0, 200))
+    console.error(`[Gemini Image ${style}]`, response.status, errBody.slice(0, 300))
     throw new Error(`이미지 생성 실패 (${style}: ${response.status})`)
   }
 
   const result = await response.json()
-  return result?.data?.[0]?.b64_json || ''
+  const parts = result?.candidates?.[0]?.content?.parts || []
+
+  // 이미지 파트 찾기
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      const mimeType = part.inlineData.mimeType || 'image/png'
+      return `data:${mimeType};base64,${part.inlineData.data}`
+    }
+  }
+
+  throw new Error(`이미지가 응답에 포함되지 않았습니다 (${style})`)
 }
 
 export async function POST(req: NextRequest) {
@@ -63,25 +70,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '필수 입력값이 없습니다.' }, { status: 400 })
     }
 
-    if (!OPENAI_API_KEY) {
-      return NextResponse.json({ error: 'OPENAI_API_KEY가 설정되지 않았습니다.' }, { status: 500 })
+    if (!GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY가 설정되지 않았습니다.' }, { status: 500 })
     }
 
-    // 병렬로 이미지 생성 (최대 4개)
+    // 순차 생성 (Gemini 무료 티어 rate limit 고려)
     const stylesToGenerate = styles.slice(0, 4)
-    const results = await Promise.allSettled(
-      stylesToGenerate.map(style => generateOneImage(productName, category, mood, style))
-    )
-
     const images: Record<string, string> = {}
-    results.forEach((result, i) => {
-      const style = stylesToGenerate[i]
-      if (result.status === 'fulfilled' && result.value) {
-        images[style] = `data:image/png;base64,${result.value}`
-      } else {
-        console.error(`[${style}] 실패:`, result.status === 'rejected' ? result.reason : 'empty')
+
+    for (const style of stylesToGenerate) {
+      try {
+        const dataUrl = await generateOneImage(productName, category, mood, style)
+        images[style] = dataUrl
+        console.log(`[Gemini Image] ${style} 생성 완료`)
+      } catch (err) {
+        console.error(`[${style}] 실패:`, err instanceof Error ? err.message : err)
+        // 실패해도 다음 이미지 계속 생성
       }
-    })
+    }
 
     return NextResponse.json({
       images,

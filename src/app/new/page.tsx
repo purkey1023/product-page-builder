@@ -89,7 +89,7 @@ export default function NewProjectPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productName, category, mood,
-            styles: ['texture', 'ingredient', 'lifestyle'],
+            styles: ['texture', 'ingredient', 'lifestyle', 'banner'],
           }),
         }),
       ])
@@ -127,7 +127,28 @@ export default function NewProjectPage() {
       }
 
       // 섹션 엘리먼트에서 generate: 마커를 실제 이미지로 교체
+      // + 특정 섹션 배경에 AI 생성 이미지 자동 적용
+      const sectionBgMap: Record<string, string> = {
+        texture: 'texture',
+        banner: 'banner',
+        hero: 'lifestyle',
+      }
+
       for (const section of sections) {
+        // 섹션 배경 이미지 적용
+        const bgStyle = sectionBgMap[section.type]
+        if (bgStyle && aiImages[bgStyle] && section.background.type === 'color') {
+          // texture, banner 섹션은 배경 이미지로 전환
+          if (section.type === 'texture' || section.type === 'banner') {
+            section.background = {
+              type: 'image',
+              value: aiImages[bgStyle],
+              overlay: 'rgba(0,0,0,0.3)',
+            }
+          }
+        }
+
+        // 엘리먼트 이미지 마커 교체
         for (const el of section.elements) {
           if (el.type === 'image') {
             if (el.src === 'product' && imageUrl) {
@@ -137,7 +158,6 @@ export default function NewProjectPage() {
               if (aiImages[style]) {
                 el.src = aiImages[style]
               }
-              // AI 이미지 없으면 마커 유지 (에디터에서 placeholder 표시)
             }
           }
         }
