@@ -90,11 +90,33 @@ export default function NewProjectPage() {
       const data = await res.json()
       let html = data.html || ''
 
-      // __PRODUCT_IMG__ 마커를 실제 이미지로 교체
+      // 이미지 삽입: 마커 교체 + 강제 삽입
       if (imagePreview) {
+        // 1차: __PRODUCT_IMG__ 마커 교체
+        const markerCount = (html.match(/__PRODUCT_IMG__/g) || []).length
         html = html.replace(/__PRODUCT_IMG__/g, imagePreview)
+
+        // 2차: 마커가 없었으면 → 섹션에 강제 삽입
+        if (markerCount === 0) {
+          const imgHtml = `<div style="text-align:center;padding:30px 20px;"><img src="${imagePreview}" alt="${productName}" style="width:85%;max-height:450px;object-fit:contain;border-radius:16px;filter:drop-shadow(0 8px 32px rgba(0,0,0,0.15));" /></div>`
+          // HERO 섹션(첫 section)에 삽입
+          const firstSection = html.match(/<section[^>]*>/i)
+          if (firstSection) {
+            const pos = html.indexOf(firstSection[0]) + firstSection[0].length
+            html = html.slice(0, pos) + imgHtml + html.slice(pos)
+          }
+          // 중간 섹션에도 삽입
+          const allSections = html.match(/<section[^>]*>/gi) || []
+          if (allSections.length >= 6) {
+            const midSection = allSections[Math.floor(allSections.length / 2)]
+            let searchFrom = html.indexOf(midSection, html.indexOf(firstSection![0]) + 100)
+            if (searchFrom > 0) {
+              searchFrom += midSection.length
+              html = html.slice(0, searchFrom) + imgHtml + html.slice(searchFrom)
+            }
+          }
+        }
       } else {
-        // 이미지 없으면 SVG 플레이스홀더
         html = html.replace(/__PRODUCT_IMG__/g,
           "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23f0f0f0'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='24' fill='%23ccc'%3EProduct%3C/text%3E%3C/svg%3E"
         )

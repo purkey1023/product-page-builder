@@ -35,90 +35,119 @@ export async function POST(req: NextRequest) {
 
     const designGuide = MOOD_DESIGN[mood] || MOOD_DESIGN.clean
 
-    const prompt = `당신은 연매출 100억 이상 한국 브랜드의 상세페이지를 제작하는 최고급 웹 디자이너 겸 카피라이터입니다.
+    const prompt = `당신은 ANUA, 라네즈, 이니스프리 수준의 한국 프리미엄 상세페이지 전문 디자이너입니다.
 
-아래 제품 정보로 **완전한 HTML 파일 1개**를 생성하세요.
+[절대 규칙 - 위반 시 실패]
+• 제품명 "${productName}"을 절대 변경/창작하지 마세요. 입력된 이름 그대로 사용.
+• <!DOCTYPE html>로 시작하는 완전한 HTML만 출력. 설명/마크다운 금지.
+• Tailwind CSS, 외부 JS CDN 사용 금지. <style>에 순수 CSS만.
+• Google Fonts: 'Noto Sans KR'(본문) + 'Playfair Display'(영문 제목) CDN.
+• 외부 이미지 URL 금지. 제품 이미지는 <img src="__PRODUCT_IMG__" /> 마커 사용.
+• 구매버튼 넣지 마세요.
 
-━━━ 제품 정보 ━━━
+[제품 정보]
 제품명: ${productName}
 카테고리: ${category}
 핵심 소구: ${keyPoints.join(' / ')}
 
-━━━ 디자인 무드 ━━━
-${designGuide}
+[디자인 무드] ${designGuide}
 
-━━━ 반드시 지켜야 할 규칙 ━━━
-1. <!DOCTYPE html>로 시작하는 완전한 HTML만 출력. 설명이나 마크다운 절대 금지.
-2. Tailwind CSS, 외부 JS CDN 사용 금지. 모든 스타일은 <style> 태그에 순수 CSS.
-3. Google Fonts CDN: 'Noto Sans KR' + 'Pretendard' 또는 'Playfair Display' 로드.
-4. 모바일 최적화: max-width:480px, margin:0 auto, 각 섹션 width:100%.
-5. 구매 버튼 넣지 마세요 (이미지용 상세페이지).
-6. 이미지 자리에 <img src="__PRODUCT_IMG__" /> 마커 사용 (2~3군데 배치).
-7. 외부 이미지 URL 절대 금지. 이미지 없는 데코는 CSS gradient/SVG로 처리.
+━━━ ANUA 스타일 레이아웃 규칙 (반드시 적용) ━━━
 
-━━━ 섹션 구조 (필수 순서) ━━━
+1. **이미지-텍스트 교차 배치**: 섹션마다 레이아웃을 다르게!
+   - 섹션A: 이미지 왼쪽 + 텍스트 오른쪽 (display:flex)
+   - 섹션B: 텍스트만 풀폭 중앙
+   - 섹션C: 이미지 오른쪽 + 텍스트 왼쪽
+   - 섹션D: 카드 그리드
+   이렇게 교차해야 지루하지 않음.
 
-■ HERO (풀폭, 임팩트 있게)
-- 분위기에 맞는 배경색/그라데이션
-- 제품 이미지 <img src="__PRODUCT_IMG__" style="width:80%;max-height:400px;object-fit:contain" />
-- 강렬한 헤드라인 (font-size:28px~36px, font-weight:800)
-- 감성적 서브카피
-- ★4.9 별점 배지 + 리뷰수
+2. **제품 이미지 3군데 필수 배치**:
+   - HERO: 풀폭 배경 위 제품 이미지 (가장 크게)
+   - INGREDIENT/BENEFITS: 좌우 교차 레이아웃에서 한쪽에 제품
+   - VISUAL BANNER: 감성 배경 위 제품 이미지
+   → <img src="__PRODUCT_IMG__" alt="${productName}" /> 마커 3개 사용
 
-■ BRAND STORY (감성 배너)
-- 브랜드 철학 또는 탄생 스토리
-- 큰 인용구 스타일 (font-size:20px, italic, 좌측 accent 라인)
+3. **여백은 컴팩트하게**: 섹션 padding:40px 20px (과도한 여백 금지)
 
-■ PROBLEM → SOLUTION
-- "이런 고민 있으셨나요?" + 3개 페인포인트
-- "그래서 만들었습니다" 솔루션 선언
-- 카드형 레이아웃, 아이콘/이모지 활용
+4. **타이포 계층 강하게**:
+   - 대제목: 28~32px, weight:800, letter-spacing:-1px
+   - 소제목: 18~20px, weight:700
+   - 본문: 14~15px, weight:400, line-height:1.7, color:#666
+   - 캡션: 12px, color:#999
 
-■ KEY BENEFITS (핵심 장점 4개)
-- 2x2 그리드 카드
-- 각 카드: 큰 이모지 + 굵은 제목 + "성분이 ~해서 ~효과" 설명
-- hover시 약간 올라가는 효과 (transform:translateY(-2px))
+━━━ 섹션 구조 (12개, 필수 순서) ━━━
 
-■ PROOF IN NUMBERS (수치 증거)
-- 4개 수치 가로 배열 (font-size:32px~48px, font-weight:900, accent 색상)
-- "수분 47%↑", "만족도 98%", "재구매율 89%" 등
-- 하단에 작은 출처 표기
+■ 1. HERO (풀폭 배경 + 가운데 정렬)
+background: 무드에 맞는 그라데이션 (다크면 어두운 그라데이션, 클린이면 밝은 파스텔)
+<img src="__PRODUCT_IMG__" style="width:70%;max-height:380px;object-fit:contain;filter:drop-shadow(0 20px 40px rgba(0,0,0,0.2))" />
+영문 브랜드 작게 (12px, letter-spacing:3px, 대문자, opacity:0.6)
+한글 제목 크게 (30px, weight:800, 2줄까지)
+서브카피 (15px, opacity:0.7)
+★★★★★ 4.9 (2,847 리뷰) 배지 — 배경색 있는 pill 형태
 
-■ INGREDIENTS (핵심 성분 3개)
-- 원형 배경 아이콘 + 성분명 + 효과 설명
-- 소비자 언어로 번역 ("히알루론산이 수분을 끌어당겨 하루종일 촉촉")
+■ 2. BRAND PHILOSOPHY (감성 인용구)
+배경: 부드러운 서브 색상
+좌측 accent 세로선 (4px 두께) + italic 인용구 (20px)
+"우리는 ~를 믿습니다" 또는 "피부 본연의 힘을 깨우다" 스타일
 
-■ VISUAL BANNER (풀폭 감성)
-- 다크/컬러 배경 풀폭 배너
-- 제품 이미지 <img src="__PRODUCT_IMG__" /> + 감성 카피 한 줄
+■ 3. PROBLEM → SOLUTION (공감 → 해결)
+제목: "이런 고민, 있으셨나요?"
+3개 페인포인트를 이모지 + 텍스트 리스트로
+구분선 후 "그래서 만들었습니다" + 솔루션 1~2문장
+배경: 약간 다른 톤
 
-■ HOW TO USE (3단계)
-- 큰 번호(01/02/03) + 제목 + 설명
-- 세로 타임라인 UI
+■ 4. KEY VISUAL (이미지+텍스트 좌우 교차 — 이 섹션이 핵심!)
+display:flex; align-items:center; gap:32px
+왼쪽: <img src="__PRODUCT_IMG__" style="width:45%;border-radius:20px" />
+오른쪽: 강조 뱃지 + 제목(22px) + 본문(15px) + 포인트 리스트
+☆ 이 레이아웃이 ANUA 스타일의 핵심. 반드시 포함.
 
-■ REVIEWS (리뷰 4개)
-- ★★★★★ + 이름(김*진, 28세) + 구체적 후기
-- "인증구매" 뱃지, 카드 레이아웃
+■ 5. BENEFITS (핵심 장점 3~4개)
+2x2 그리드 (display:grid; grid-template-columns:1fr 1fr; gap:16px)
+각 카드: 이모지(32px) + 굵은 제목(16px) + 설명(13px) + 배경+그림자
+"성분이 ~해서 ~효과" 소비자 언어로
 
-■ FAQ (5개, 모두 펼침)
-- Q: 굵은 글씨 / A: 일반 글씨 + 구분선
+■ 6. PROOF (수치 4개)
+가로 배열 (display:flex; justify-content:space-around)
+큰 숫자 (36px, weight:900, accent 색) + 설명 (13px)
+하단 출처 (11px, opacity:0.4)
 
-■ TRUST BADGES
-- 무료배송, 환불보장, 정품인증, 친환경 아이콘 가로 배열
+■ 7. INGREDIENTS (성분 3개)
+세로 나열. 각 성분: 원형 아이콘 배경(60px) + 성분명(bold) + 유래 + 효과
+"~이/가 ~해서 ~한 효과" 형태로 소비자 언어 번역
 
-■ FOOTER
-- 브랜드명 + 고객센터 + 저작권
+■ 8. VISUAL BANNER (풀폭 감성 배너)
+다크 배경 풀폭, 가운데 정렬
+<img src="__PRODUCT_IMG__" style="width:50%;max-height:300px;object-fit:contain" />
+감성 카피 1줄 (22px, 밝은 색상)
 
-━━━ CSS 디자인 디테일 (이것이 퀄리티를 결정) ━━━
-• 섹션 교대 배경: 메인/서브 색상 교대
-• 제목 아래 accent 라인: width:50px; height:3px; background:accent; margin:12px auto 24px;
-• 카드: border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.08); padding:28px;
-• 부드러운 그라데이션: linear-gradient(180deg, color1, color2)
-• 넉넉한 여백: 섹션 padding:60px 24px, 요소 간 gap:20px~32px
-• 세련된 타이포: letter-spacing:-0.5px, line-height:1.5
-• 텍스트 색상 계층: 제목/본문/보조 3단계
-• @keyframes fadeInUp 스크롤 애니메이션 + IntersectionObserver
-• 반응형 @media(max-width:480px) 대응`
+■ 9. HOW TO USE (3단계)
+세로 스텝: 큰 번호(01/02/03, accent 색, 32px) + 제목 + 설명
+각 스텝 사이 세로 점선 연결
+
+■ 10. REVIEWS (리뷰 3~4개)
+카드 형태. 별점 ★★★★★ + "김*진, 28세" + 구체적 후기(3줄)
+"인증구매" 작은 뱃지. 카드 간 gap:12px
+
+■ 11. FAQ (4~5개, 모두 펼침 — 아코디언 금지)
+Q: weight:700 + A: color:#666 + 구분선(border-bottom:1px solid #eee)
+
+■ 12. TRUST + FOOTER
+Trust: 이모지 아이콘 4개 가로 배열 (무료배송/환불/정품/친환경)
+Footer: 브랜드명 + 고객센터 전화 + 저작권 (배경: 가장 어두운 색)
+
+━━━ CSS 필수 디테일 ━━━
+• body{margin:0;font-family:'Noto Sans KR',sans-serif;color:#1a1a1a;-webkit-font-smoothing:antialiased}
+• 섹션 배경 교대: 흰색 ↔ 서브색상 ↔ 다크 ↔ 흰색 (단조로움 방지)
+• 제목 하단 accent 바: width:40px;height:3px;background:accent;margin:10px auto 20px
+• 카드: border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,0.06);padding:24px
+• img{border-radius:16px;transition:transform 0.3s}
+• flex 레이아웃: display:flex;align-items:center;gap:24px (좌우 교차에 사용)
+• @media(max-width:480px){.flex-row{flex-direction:column!important}}
+• @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+• .reveal{opacity:0;transform:translateY(20px);transition:all 0.6s ease}
+• .reveal.active{opacity:1;transform:translateY(0)}
+• <script>에 IntersectionObserver로 .reveal 클래스 활성화`
 
     const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = []
 
