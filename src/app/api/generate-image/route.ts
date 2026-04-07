@@ -152,7 +152,19 @@ CRITICAL: NO objects, NO text, NO products. Bright warm gradient background only
 
   // 섹션 텍스트 컨텍스트 주입 — 이미지가 섹션 내용과 매칭되도록
   if (sectionContext) {
-    prompt += `\n\nIMPORTANT CONTEXT — This image is for a section with the following content. The image must visually match and complement this text:\n"${sectionContext}"\n\nMake sure the image's subject matter, colors, and mood align with the above description. For example, if the text mentions specific ingredients (heartleaf, hyaluronic acid, vitamin C, etc.), those ingredients should be visually represented. If it mentions "soothing" or "calming", use cool green/blue tones. If it mentions "firming" or "anti-aging", use golden/luxurious tones.`
+    prompt += `
+
+====== SECTION CONTEXT (VERY IMPORTANT — READ CAREFULLY) ======
+This image is placed in a product detail page section. The nearby text describes what this image should represent.
+
+${sectionContext}
+
+YOU MUST make the image match the above text content:
+- If it mentions specific INGREDIENTS (어성초=heartleaf, 히알루론산=hyaluronic acid, 비타민C=vitamin C, 나이아신아마이드=niacinamide, 펩타이드=peptide, 콜라겐=collagen, 레티놀=retinol, 세라마이드=ceramide, 녹차=green tea, 알로에=aloe vera, 프로폴리스=propolis), show those actual ingredients visually.
+- If it mentions EFFECTS (보습=hydrating→water/moisture, 진정=soothing→green/calm, 탄력=firming→golden/structured, 미백=brightening→bright/luminous, 주름=anti-wrinkle→smooth, 모공=pore→clean/refined), reflect that mood in colors and composition.
+- If it mentions TEXTURE (세럼=serum, 크림=cream, 젤=gel, 토너=toner, 오일=oil, 에센스=essence, 앰플=ampoule), show that exact texture type.
+- The CLOSEST text to the image is the most important — it directly describes what this image should show.
+================================================================`
   }
 
   return prompt

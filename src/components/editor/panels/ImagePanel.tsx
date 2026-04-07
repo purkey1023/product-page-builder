@@ -31,17 +31,56 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
     e.target.value = ''
   }
 
-  // 현재 섹션의 텍스트 컨텍스트 수집
+  // 이미지 근처 텍스트를 우선으로 섹션 컨텍스트 수집
   const getSectionContext = (): string => {
     if (!project) return ''
     const section = project.sections.find((s) => s.id === sectionId)
     if (!section) return ''
-    const texts = section.elements
+
+    const imgY = element.y
+    const imgH = element.height
+    const textEls = section.elements
       .filter((el) => el.type === 'text')
-      .map((el) => (el as import('@/types').TextElement).content)
-      .filter((t) => t.length > 2)
-      .join(' / ')
-    return `[${section.label}] ${texts}`.slice(0, 500)
+      .map((el) => {
+        const t = el as import('@/types').TextElement
+        // 이미지와의 Y축 거리 계산 (가까울수록 우선)
+        const dist = Math.abs((t.y + t.height / 2) - (imgY + imgH / 2))
+        return { content: t.content, fontSize: t.fontSize, dist }
+      })
+      .filter((t) => t.content.length > 2)
+
+    // 1) 이미지에 가까운 텍스트 (위아래 300px 이내)
+    const nearby = textEls
+      .filter((t) => t.dist < 300)
+      .sort((a, b) => a.dist - b.dist)
+      .map((t) => t.content)
+
+    // 2) 제목급 텍스트 (fontSize >= 20)
+    const titles = textEls
+      .filter((t) => t.fontSize >= 20)
+      .sort((a, b) => b.fontSize - a.fontSize)
+      .map((t) => t.content)
+
+    // 3) 나머지 본문
+    const body = textEls
+      .filter((t) => t.fontSize < 20)
+      .sort((a, b) => a.dist - b.dist)
+      .map((t) => t.content)
+
+    // 조합: 가까운 텍스트 → 제목 → 본문 (중복 제거)
+    const seen = new Set<string>()
+    const parts: string[] = []
+    for (const arr of [nearby, titles, body]) {
+      for (const text of arr) {
+        if (!seen.has(text)) {
+          seen.add(text)
+          parts.push(text)
+        }
+      }
+    }
+
+    const result = `섹션: ${section.label}\n가장 가까운 텍스트: ${parts.slice(0, 3).join(' | ')}\n전체 컨텍스트: ${parts.slice(3, 8).join(' | ')}`
+    return result.slice(0, 800)
   }
 
   const handleAiGenerate = async (style?: string) => {
