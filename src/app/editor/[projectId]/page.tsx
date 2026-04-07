@@ -1,41 +1,53 @@
-import { notFound } from 'next/navigation'
-import { createServerSupabase } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { EditorLayout } from '@/components/editor/EditorLayout'
+import { getProject } from '@/lib/supabase/projects'
+import type { Project } from '@/types'
 
-interface EditorPageProps {
-  params: Promise<{ projectId: string }>
-}
+export default function EditorPage() {
+  const params = useParams()
+  const projectId = params.projectId as string
+  const [project, setProject] = useState<Project | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export default async function EditorPage({ params }: EditorPageProps) {
-  const { projectId } = await params
-  const supabase = await createServerSupabase()
+  useEffect(() => {
+    async function load() {
+      try {
+        const p = await getProject(projectId)
+        if (!p) {
+          setError('프로젝트를 찾을 수 없습니다.')
+          return
+        }
+        setProject(p)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '로드 실패')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [projectId])
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return notFound()
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-gray-400" size={24} />
+      </div>
+    )
   }
-
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single()
 
   if (error || !project) {
-    return notFound()
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <p className="text-gray-600">{error ?? '프로젝트를 찾을 수 없습니다.'}</p>
+        <a href="/" className="text-blue-600 hover:underline text-sm">대시보드로 돌아가기</a>
+      </div>
+    )
   }
 
-  // DB row → Project 타입 변환
-  const projectData = {
-    id: project.id,
-    userId: project.user_id,
-    name: project.name,
-    product: project.product,
-    sections: project.sections,
-    createdAt: project.created_at,
-    updatedAt: project.updated_at,
-  }
-
-  return <EditorLayout project={projectData} />
+  return <EditorLayout project={project} />
 }

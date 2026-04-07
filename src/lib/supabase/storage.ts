@@ -1,4 +1,4 @@
-import { createClientSupabase } from './client'
+import { isSupabaseConfigured, createClientSupabase } from './client'
 import { ensureSession } from './auth'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -22,6 +22,12 @@ export async function uploadProductImage(file: File): Promise<UploadResult> {
     throw new Error('PNG, JPG, WEBP 형식만 지원합니다.')
   }
 
+  // 로컬 모드: base64 Data URL로 변환
+  if (!isSupabaseConfigured) {
+    const dataUrl = await fileToDataUrl(file)
+    return { url: dataUrl, path: `local/${uuidv4()}.${ext}` }
+  }
+
   const supabase = createClientSupabase()
   const user = await ensureSession()
   if (!user) throw new Error('세션 생성에 실패했습니다.')
@@ -42,7 +48,17 @@ export async function uploadProductImage(file: File): Promise<UploadResult> {
 }
 
 export async function deleteProductImage(path: string): Promise<void> {
+  if (!isSupabaseConfigured || path.startsWith('local/')) return
   const supabase = createClientSupabase()
   const { error } = await supabase.storage.from(BUCKET).remove([path])
   if (error) throw new Error(error.message)
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
