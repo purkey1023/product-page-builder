@@ -174,6 +174,7 @@ export function CanvasElement({ element, sectionId, productImageUrl }: CanvasEle
               objectFit: el.objectFit,
               borderRadius: el.borderRadius,
               opacity: el.opacity,
+              background: 'transparent',
             }}
           />
         )
@@ -207,7 +208,7 @@ export function CanvasElement({ element, sectionId, productImageUrl }: CanvasEle
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ zIndex: isSelected ? 100 : 1 }}
+      style={{ zIndex: isSelected ? 100 : 1, background: 'transparent' }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
@@ -217,8 +218,9 @@ export function CanvasElement({ element, sectionId, productImageUrl }: CanvasEle
     >
       <div
         className={`w-full h-full ${
-          isSelected && !isEditing ? 'ring-2 ring-blue-500 ring-offset-1' : ''
-        } ${isEditing ? 'ring-2 ring-green-500 ring-offset-1' : ''}`}
+          isSelected && !isEditing ? 'outline outline-2 outline-blue-500 outline-offset-1' : ''
+        } ${isEditing ? 'outline outline-2 outline-green-500 outline-offset-1' : ''}`}
+        style={{ background: 'transparent' }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
       >
