@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useEditorStore } from '@/store/editorStore'
 import { CANVAS_WIDTH } from '@/types'
 import { SectionCanvas } from './SectionCanvas'
@@ -14,7 +14,12 @@ export function Canvas({ sectionRefs }: CanvasProps) {
   const deselectAll = useEditorStore((s) => s.deselectAll)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const visibleSections = useEditorStore((s) => s.getVisibleSections())
+  const visibleSections = useMemo(() => {
+    if (!project) return []
+    return [...project.sections]
+      .filter((s) => s.isVisible)
+      .sort((a, b) => a.order - b.order)
+  }, [project])
 
   const handleBackgroundClick = useCallback(
     (e: React.MouseEvent) => {
