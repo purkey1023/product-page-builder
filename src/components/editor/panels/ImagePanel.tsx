@@ -31,6 +31,19 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
     e.target.value = ''
   }
 
+  // 현재 섹션의 텍스트 컨텍스트 수집
+  const getSectionContext = (): string => {
+    if (!project) return ''
+    const section = project.sections.find((s) => s.id === sectionId)
+    if (!section) return ''
+    const texts = section.elements
+      .filter((el) => el.type === 'text')
+      .map((el) => (el as import('@/types').TextElement).content)
+      .filter((t) => t.length > 2)
+      .join(' / ')
+    return `[${section.label}] ${texts}`.slice(0, 500)
+  }
+
   const handleAiGenerate = async (style?: string) => {
     if (!project || isGenerating) return
     const generateStyle = style || element.src.replace('generate:', '') || 'lifestyle'
@@ -59,6 +72,7 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
           mood: project.product.mood,
           styles: [generateStyle],
           productImageBase64,
+          sectionContext: getSectionContext(),
         }),
       })
       if (!res.ok) throw new Error('생성 실패')

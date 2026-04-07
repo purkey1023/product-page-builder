@@ -9,6 +9,7 @@ interface GenerateImageRequest {
   mood: string
   styles: string[]
   productImageBase64?: string
+  sectionContext?: string // 섹션 텍스트 컨텍스트 (제목, 설명 등)
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -69,7 +70,8 @@ function buildPrompt(
   analysis: string,
   productName: string,
   category: string,
-  mood: string
+  mood: string,
+  sectionContext?: string
 ): string {
   const moodStyle: Record<string, string> = {
     premium: 'Luxurious, warm golden tones, Sulwhasoo/Whoo advertisement quality, dark rich backdrop with golden light',
@@ -130,7 +132,14 @@ Style: ${moodDesc}
 CRITICAL: NO objects, NO text, NO products. Just pure gradient background with subtle light effects.`,
   }
 
-  return prompts[style] || prompts.texture
+  let prompt = prompts[style] || prompts.texture
+
+  // 섹션 텍스트 컨텍스트 주입 — 이미지가 섹션 내용과 매칭되도록
+  if (sectionContext) {
+    prompt += `\n\nIMPORTANT CONTEXT — This image is for a section with the following content. The image must visually match and complement this text:\n"${sectionContext}"\n\nMake sure the image's subject matter, colors, and mood align with the above description. For example, if the text mentions specific ingredients (heartleaf, hyaluronic acid, vitamin C, etc.), those ingredients should be visually represented. If it mentions "soothing" or "calming", use cool green/blue tones. If it mentions "firming" or "anti-aging", use golden/luxurious tones.`
+  }
+
+  return prompt
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -212,7 +221,7 @@ async function generateImage(prompt: string): Promise<string | null> {
 export async function POST(req: NextRequest) {
   try {
     const body: GenerateImageRequest = await req.json()
-    const { productName, category, mood, styles, productImageBase64 } = body
+    const { productName, category, mood, styles, productImageBase64, sectionContext } = body
 
     if (!productName || !styles?.length) {
       return NextResponse.json({ error: '필수 입력값이 없습니다.' }, { status: 400 })
@@ -230,7 +239,7 @@ export async function POST(req: NextRequest) {
     const images: Record<string, string> = {}
 
     for (const style of styles) {
-      const prompt = buildPrompt(style, analysis, productName, category, mood)
+      const prompt = buildPrompt(style, analysis, productName, category, mood, sectionContext)
       console.log(`[Image] ${style} 생성 중...`)
 
       const result = await generateImage(prompt)
