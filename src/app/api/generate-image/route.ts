@@ -73,11 +73,22 @@ function buildPrompt(
   mood: string,
   sectionContext?: string
 ): string {
+  // 공통 톤 지시: 밝고 따뜻한 한국 뷰티 화보 톤
+  const TONE_GUIDE = `
+LIGHTING & TONE (CRITICAL — apply to ALL images):
+- Overall tone: BRIGHT, WARM, SOFT, AIRY — like a Korean beauty magazine editorial
+- Lighting: Soft natural window light or large diffused softbox. NO harsh shadows. NO dark moody lighting.
+- Color temperature: Warm (5500-6500K). Slightly warm beige/cream undertone throughout.
+- Background: Light, bright — warm beige (#F5F0EB), soft cream (#FFF8F0), or clean white. NEVER dark or black.
+- Exposure: Slightly bright/overexposed (+0.3~0.7 EV). Skin and surfaces should glow softly.
+- Reference: PEPTOIR, ANUA, Sulwhasoo Korean beauty advertisement — always bright, clean, warm, inviting.
+- AVOID: Dark backgrounds, dramatic shadows, cool blue tones, underexposed/moody looks.`
+
   const moodStyle: Record<string, string> = {
-    premium: 'Luxurious, warm golden tones, Sulwhasoo/Whoo advertisement quality, dark rich backdrop with golden light',
-    clean: 'Pure minimal white aesthetic, bright airy soft light, Laneige/Dr.Jart+ style, clinical precision',
-    natural: 'Warm botanical earth tones, ANUA/Innisfree style, natural morning light, organic feeling',
-    impact: 'Bold dramatic high-contrast, dramatic shadows, VT/Medicube style, vivid saturated colors',
+    premium: 'Warm luxurious golden-beige tones, bright soft lighting, Sulwhasoo/PEPTOIR style, cream/gold palette on light background',
+    clean: 'Pure bright white aesthetic, airy soft diffused light, Laneige/Dr.Jart+ style, clean and luminous',
+    natural: 'Warm bright botanical tones, ANUA/Innisfree style, golden morning light, soft beige background, organic warmth',
+    impact: 'Bright vivid colors with energy, clean white background with bold accents, VT/Medicube style, high-key lighting',
   }
 
   const moodDesc = moodStyle[mood] || moodStyle.natural
@@ -85,51 +96,56 @@ function buildPrompt(
   const prompts: Record<string, string> = {
     texture: `Ultra-photorealistic extreme macro close-up of ${category} product texture on the back of a Korean woman's hand. Product details: ${analysis}
 
-The texture should EXACTLY match the product (if serum: transparent glossy liquid drop, if cream: thick white/beige cream, if toner: light watery transparent liquid, if gel: clear gel with visible bubbles). Show the actual product being applied/spread on clean smooth skin.
+The texture should EXACTLY match the product (if serum: transparent glossy liquid drop, if cream: thick white/beige cream, if toner: light watery transparent liquid, if gel: clear gel with visible bubbles). Show the actual product being applied/spread on clean, bright, smooth skin.
 
-Shot with Canon EOS R5, RF 100mm f/2.8L Macro lens, f/4, ISO 100. Professional studio softbox lighting from above-left creating subtle highlights on the texture. Shallow depth of field focusing on the texture detail. Korean skincare brand editorial quality.
+Shot with Canon EOS R5, RF 100mm f/2.8L Macro lens, f/4, ISO 100. BRIGHT soft diffused lighting from large window/softbox creating gentle highlights. The skin tone should be bright and luminous. Light warm beige or white background visible at edges. Shallow depth of field.
 
 Style: ${moodDesc}
+${TONE_GUIDE}
 
-CRITICAL: Absolutely NO text, numbers, letters, logos, watermarks, or product packaging in the image. Pure texture on skin only.`,
+CRITICAL: Absolutely NO text, numbers, letters, logos, watermarks, or product packaging. Pure texture on bright skin only.`,
 
     ingredient: `Extreme macro close-up inside a glass container of ${category} liquid/serum/essence. Product: ${analysis}
 
-Show the actual product liquid with visible details: micro-bubbles suspended in the liquid, light refracting through transparent/translucent solution, the exact color matching the product (golden, clear, milky, etc.). Shot from very close, the glass container edge may be slightly visible at frame edges.
+Show the actual product liquid with visible details: micro-bubbles suspended in the liquid, light refracting through transparent/translucent solution, the exact color matching the product (golden, clear, milky, etc.). Shot from very close, the glass container edge may be slightly visible.
 
-Photographed with Phase One IQ4 150MP, Schneider 120mm Macro, f/5.6. Backlit with warm softbox creating beautiful light transmission through the liquid. Ultra-sharp focus on the bubbles and liquid structure. Beauty editorial commercial quality.
-
-Style: ${moodDesc}
-
-CRITICAL: NO text, numbers, letters, logos, or labels visible. Pure liquid macro only.`,
-
-    lifestyle: `Professional Korean beauty advertisement photo. An elegant Korean woman in her late 20s with flawless dewy glass skin is shown applying/holding a ${category} product near her face. Product context: ${analysis}
-
-She has natural minimal Korean makeup (gradient lips, subtle eye makeup, dewy highlight on cheekbones). Her expression is serene and confident. The product (dropper/pump/tube matching the actual product) is being used naturally.
-
-Shot with Sony A7R V, 85mm f/1.4 GM lens, natural window light mixed with fill light. Soft creamy bokeh background in warm neutral tones. Korean beauty brand campaign quality (ANUA, Sulwhasoo, Laneige level).
+Photographed with Phase One IQ4 150MP, Schneider 120mm Macro, f/5.6. BRIGHT warm backlight creating beautiful golden light transmission through the liquid. The overall image should feel BRIGHT and luminous, like light shining through honey or champagne. Clean white/cream background.
 
 Style: ${moodDesc}
+${TONE_GUIDE}
 
-CRITICAL: The woman should look like a real Korean person, not AI-generated. NO text or logos. The product shown should match the description but have NO readable text on labels.`,
+CRITICAL: NO text, numbers, letters, logos, or labels visible. Pure bright liquid macro only.`,
+
+    lifestyle: `Professional Korean beauty advertisement photo. An elegant Korean woman in her late 20s with flawless dewy glass skin holding a ${category} product near her face. Product context: ${analysis}
+
+She has natural minimal Korean makeup (gradient lips, subtle eye makeup, dewy highlight on cheekbones). Her expression is serene and confident. She wears a simple white or cream top. The product is held naturally near her jawline/cheek.
+
+Shot with Sony A7R V, 85mm f/1.4 GM lens. BRIGHT natural window light from the left, with a warm fill light. Soft creamy WARM BEIGE bokeh background (#E8DDD0 to #F5EDE3). The skin should GLOW with dewy luminosity. Overall bright, warm, inviting tone — like a PEPTOIR or ANUA campaign photo.
+
+Style: ${moodDesc}
+${TONE_GUIDE}
+
+CRITICAL: The woman should look like a real Korean person. NO text or logos. Product should have NO readable text on labels.`,
 
     banner: `Abstract flowing liquid beauty texture art. Product: ${analysis}
 
-Create a mesmerizing wave/flow of the product liquid (matching the actual product color - golden serum, clear gel, white cream, etc.) flowing diagonally across the frame against a clean background. The liquid should have visible micro-bubbles, internal refraction, and glossy surface tension. Dynamic flowing movement frozen in time.
+Create a mesmerizing wave/flow of the product liquid (matching the actual product color - golden serum, clear gel, white cream, etc.) flowing diagonally across the frame against a BRIGHT CLEAN background. The liquid should have visible micro-bubbles, internal refraction, and glossy surface tension. Dynamic flowing movement frozen in time.
 
-Shot with Hasselblad H6D-400c, 120mm macro, high-speed flash freezing the liquid motion. Professional beauty advertisement. The background should be soft gradient (white to light neutral).
-
-Style: ${moodDesc}
-
-CRITICAL: NO text, logos, or product packaging. Pure abstract liquid art only.`,
-
-    hero_bg: `Soft gradient studio background for Korean premium beauty product photography. Product context: ${analysis}
-
-Create a smooth, elegant gradient backdrop that complements this product's color palette. Soft circular bokeh light effects and subtle warm/cool light interplay. The gradient should transition from the product's main color tone to a softer neutral. Premium beauty brand studio setup quality.
+Shot with Hasselblad H6D-400c, 120mm macro, high-speed flash. The background MUST be bright — soft white (#FFFFFF) to warm cream (#FFF8F0) gradient. The liquid catches warm golden light. Overall feeling: luminous, clean, premium.
 
 Style: ${moodDesc}
+${TONE_GUIDE}
 
-CRITICAL: NO objects, NO text, NO products. Just pure gradient background with subtle light effects.`,
+CRITICAL: NO text, logos, or product packaging. Pure abstract liquid art on BRIGHT background only.`,
+
+    hero_bg: `Soft bright gradient studio background for Korean premium beauty product photography. Product context: ${analysis}
+
+Create a smooth, BRIGHT, warm gradient backdrop. Colors: warm cream (#FFF8F0) to soft beige (#F0E6DA) or light rose-beige. Subtle soft circular bokeh light effects. The overall tone must be BRIGHT and WARM — like a Korean beauty brand studio backdrop.
+
+Style: ${moodDesc}
+${TONE_GUIDE}
+
+CRITICAL: NO objects, NO text, NO products. Bright warm gradient background only.`,
   }
 
   let prompt = prompts[style] || prompts.texture

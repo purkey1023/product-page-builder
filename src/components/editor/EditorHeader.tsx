@@ -47,8 +47,9 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
     <>
       <header className="h-12 flex items-center px-4 border-b bg-white gap-2 flex-shrink-0">
         {/* 뒤로가기 + 프로젝트명 */}
-        <Link href="/" className="text-gray-400 hover:text-gray-700 transition-colors">
+        <Link href="/" className="flex items-center gap-1 text-gray-400 hover:text-gray-700 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100" title="대시보드로 돌아가기">
           <ArrowLeft size={18} />
+          <span className="text-xs font-medium hidden sm:inline">목록</span>
         </Link>
         <div className="w-px h-5 bg-gray-200" />
         <span className="text-sm font-semibold text-gray-800 truncate max-w-[200px]">
