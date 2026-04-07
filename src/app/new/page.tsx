@@ -208,7 +208,7 @@ export default function NewProjectPage() {
               srcDoc={generatedHtml}
               className="w-full h-full border-0"
               title="상세페이지 프리뷰"
-              sandbox="allow-scripts"
+              sandbox="allow-scripts allow-same-origin allow-popups"
             />
           </div>
         </div>
