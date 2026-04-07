@@ -52,6 +52,27 @@ export function EditorLayout({ project }: EditorLayoutProps) {
         return
       }
 
+      // Ctrl+Z 실행 취소
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        store.undo()
+        return
+      }
+
+      // Ctrl+Shift+Z 다시 실행
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        store.redo()
+        return
+      }
+
+      // Ctrl+Y 다시 실행 (대체 단축키)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault()
+        store.redo()
+        return
+      }
+
       // 텍스트 편집 중에는 다른 단축키 무시
       if (store.editingTextId) return
 

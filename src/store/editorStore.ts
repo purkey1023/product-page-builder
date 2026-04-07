@@ -19,6 +19,8 @@ import { getDefaultSection } from '@/lib/sections'
 // ──────────────────────────────────────
 // 상태 + 액션 타입
 // ──────────────────────────────────────
+const MAX_HISTORY = 50
+
 interface EditorState {
   project: Project | null
   selectedSectionId: string | null
@@ -27,6 +29,9 @@ interface EditorState {
   isGenerating: boolean
   isSaving: boolean
   isDirty: boolean
+  // Undo/Redo
+  history: Section[][]
+  historyIndex: number
 }
 
 interface EditorActions {
@@ -35,6 +40,12 @@ interface EditorActions {
   setSaving: (v: boolean) => void
   setGenerating: (v: boolean) => void
   markClean: () => void
+
+  // Undo/Redo
+  undo: () => void
+  redo: () => void
+  canUndo: () => boolean
+  canRedo: () => boolean
 
   // Section actions
   selectSection: (id: string | null) => void
@@ -90,6 +101,18 @@ function updateSectionElements(
 }
 
 // ──────────────────────────────────────
+// Helper: 히스토리에 현재 상태 푸시
+// ──────────────────────────────────────
+function pushHistory(state: EditorState): Partial<EditorState> {
+  if (!state.project) return {}
+  const snapshot = JSON.parse(JSON.stringify(state.project.sections)) as Section[]
+  const newHistory = state.history.slice(0, state.historyIndex + 1)
+  newHistory.push(snapshot)
+  if (newHistory.length > MAX_HISTORY) newHistory.shift()
+  return { history: newHistory, historyIndex: newHistory.length - 1 }
+}
+
+// ──────────────────────────────────────
 // Zustand 스토어
 // ──────────────────────────────────────
 export const useEditorStore = create<EditorStore>()(
@@ -102,14 +125,48 @@ export const useEditorStore = create<EditorStore>()(
       isGenerating: false,
       isSaving: false,
       isDirty: false,
+      history: [],
+      historyIndex: -1,
 
       // ── Project ──
-      setProject: (project) =>
-        set({ project, isDirty: false, selectedSectionId: null, selectedElementId: null, editingTextId: null }),
+      setProject: (project) => {
+        const snapshot = JSON.parse(JSON.stringify(project.sections)) as Section[]
+        set({ project, isDirty: false, selectedSectionId: null, selectedElementId: null, editingTextId: null, history: [snapshot], historyIndex: 0 })
+      },
 
       setSaving: (v) => set({ isSaving: v }),
       setGenerating: (v) => set({ isGenerating: v }),
       markClean: () => set({ isDirty: false }),
+
+      // ── Undo/Redo ──
+      undo: () => set((state) => {
+        if (!state.project || state.historyIndex <= 0) return {}
+        const newIndex = state.historyIndex - 1
+        const sections = JSON.parse(JSON.stringify(state.history[newIndex])) as Section[]
+        return {
+          historyIndex: newIndex,
+          isDirty: true,
+          selectedElementId: null,
+          editingTextId: null,
+          project: { ...state.project, sections },
+        }
+      }),
+
+      redo: () => set((state) => {
+        if (!state.project || state.historyIndex >= state.history.length - 1) return {}
+        const newIndex = state.historyIndex + 1
+        const sections = JSON.parse(JSON.stringify(state.history[newIndex])) as Section[]
+        return {
+          historyIndex: newIndex,
+          isDirty: true,
+          selectedElementId: null,
+          editingTextId: null,
+          project: { ...state.project, sections },
+        }
+      }),
+
+      canUndo: () => get().historyIndex > 0,
+      canRedo: () => get().historyIndex < get().history.length - 1,
 
       // ── Section actions ──
       selectSection: (id) =>
@@ -129,7 +186,7 @@ export const useEditorStore = create<EditorStore>()(
           }
           const reordered = sections.map((s, i) => ({ ...s, order: i }))
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedSectionId: newSection.id,
             selectedElementId: null,
             project: { ...state.project, sections: reordered },
@@ -143,7 +200,7 @@ export const useEditorStore = create<EditorStore>()(
             .filter((s) => s.id !== id)
             .map((s, i) => ({ ...s, order: i }))
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedSectionId: state.selectedSectionId === id ? null : state.selectedSectionId,
             selectedElementId: state.selectedSectionId === id ? null : state.selectedElementId,
             project: { ...state.project, sections },
@@ -165,7 +222,7 @@ export const useEditorStore = create<EditorStore>()(
           sections.splice(idx + 1, 0, newSection)
           const reordered = sections.map((s, i) => ({ ...s, order: i }))
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedSectionId: newSection.id,
             project: { ...state.project, sections: reordered },
           }
@@ -179,14 +236,14 @@ export const useEditorStore = create<EditorStore>()(
           const to = sections.findIndex((s) => s.id === overId)
           if (from === -1 || to === -1) return {}
           const reordered = arrayMove(sections, from, to).map((s, i) => ({ ...s, order: i }))
-          return { isDirty: true, project: { ...state.project, sections: reordered } }
+          return { isDirty: true, ...pushHistory(state), project: { ...state.project, sections: reordered } }
         }),
 
       toggleVisibility: (sectionId) =>
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: {
               ...state.project,
               sections: state.project.sections.map((s) =>
@@ -200,7 +257,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: {
               ...state.project,
               sections: state.project.sections.map((s) =>
@@ -214,7 +271,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: {
               ...state.project,
               sections: state.project.sections.map((s) =>
@@ -235,7 +292,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedSectionId: sectionId,
             selectedElementId: element.id,
             project: updateSectionElements(state.project, sectionId, (els) => [...els, element]),
@@ -246,7 +303,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: updateSectionElements(state.project, sectionId, (els) =>
               els.map((el) => (el.id === elementId ? { ...el, ...patch } as SectionElement : el))
             ),
@@ -257,7 +314,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedElementId: state.selectedElementId === elementId ? null : state.selectedElementId,
             project: updateSectionElements(state.project, sectionId, (els) =>
               els.filter((el) => el.id !== elementId)
@@ -269,7 +326,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: updateSectionElements(state.project, sectionId, (els) =>
               els.map((el) => (el.id === elementId ? { ...el, x, y } : el))
             ),
@@ -280,7 +337,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.project) return {}
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             project: updateSectionElements(state.project, sectionId, (els) =>
               els.map((el) =>
                 el.id === elementId ? { ...el, width: w, height: h, x, y } : el
@@ -302,7 +359,7 @@ export const useEditorStore = create<EditorStore>()(
             y: source.y + 20,
           }
           return {
-            isDirty: true,
+            isDirty: true, ...pushHistory(state),
             selectedElementId: newEl.id,
             project: updateSectionElements(state.project, sectionId, (els) => [...els, newEl]),
           }

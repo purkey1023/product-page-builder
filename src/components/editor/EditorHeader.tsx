@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload, Palette } from 'lucide-react'
+import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload, Palette, Undo2, Redo2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEditorStore } from '@/store/editorStore'
 import { saveProject } from '@/lib/supabase/projects'
@@ -19,6 +19,10 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
   const setSaving = useEditorStore((s) => s.setSaving)
   const markClean = useEditorStore((s) => s.markClean)
   const selectedSectionId = useEditorStore((s) => s.selectedSectionId)
+  const undo = useEditorStore((s) => s.undo)
+  const redo = useEditorStore((s) => s.redo)
+  const canUndo = useEditorStore((s) => s.canUndo())
+  const canRedo = useEditorStore((s) => s.canRedo())
   const addTextElement = useEditorStore((s) => s.addTextElement)
   const addImageElement = useEditorStore((s) => s.addImageElement)
   const addShapeElement = useEditorStore((s) => s.addShapeElement)
@@ -63,7 +67,26 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
           ) : isDirty ? '수정됨' : '저장됨'}
         </span>
 
-        {/* 구분선 */}
+        {/* Undo/Redo */}
+        <div className="flex items-center gap-0.5 ml-2">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-all"
+            title="실행 취소 (Ctrl+Z)"
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-all"
+            title="다시 실행 (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={16} />
+          </button>
+        </div>
+
         <div className="flex-1" />
 
         {/* Add 도구 (가운데) */}
