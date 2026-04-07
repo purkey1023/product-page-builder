@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+dist-electron/
+cloudflared.exe
+create-icon.js
+cloudflared.exe
+create-icon.js

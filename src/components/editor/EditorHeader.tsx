@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload } from 'lucide-react'
+import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload, Palette } from 'lucide-react'
 import Link from 'next/link'
 import { useEditorStore } from '@/store/editorStore'
 import { saveProject } from '@/lib/supabase/projects'
 import { ExportModal } from './ExportModal'
+import { ConceptModal } from './ConceptModal'
 
 interface EditorHeaderProps {
   sectionRefs: React.MutableRefObject<Map<string, HTMLDivElement>>
@@ -24,6 +25,7 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
   const [exportOpen, setExportOpen] = useState(false)
   const [showShapeMenu, setShowShapeMenu] = useState(false)
   const [showImageMenu, setShowImageMenu] = useState(false)
+  const [conceptOpen, setConceptOpen] = useState(false)
   const imageFileRef = useRef<HTMLInputElement>(null)
 
   const handleManualSave = async () => {
@@ -152,6 +154,13 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
 
         {/* 우측 액션 */}
         <button
+          onClick={() => setConceptOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 transition-all"
+          title="컨셉 변경"
+        >
+          <Palette size={13} /> 컨셉
+        </button>
+        <button
           onClick={handleManualSave}
           disabled={!isDirty || isSaving}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
@@ -171,6 +180,10 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         sectionRefs={sectionRefs}
+      />
+      <ConceptModal
+        open={conceptOpen}
+        onClose={() => setConceptOpen(false)}
       />
     </>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, Sparkles, Loader2 } from 'lucide-react'
+import { Upload, Sparkles, Loader2, Scissors } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
 import type { ImageElement } from '@/types'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
   const project = useEditorStore((s) => s.project)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isRemovingBg, setIsRemovingBg] = useState(false)
 
   const update = (patch: Partial<ImageElement>) => {
     updateElement(sectionId, element.id, patch)
@@ -75,11 +76,54 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
     }
   }
 
+  const handleRemoveBg = async () => {
+    if (isRemovingBg) return
+    // 이미지 src를 base64로 변환
+    let base64 = ''
+    const src = element.src === 'product' ? project?.product.imageUrl || '' : element.src
+    if (!src) return
+
+    setIsRemovingBg(true)
+    try {
+      if (src.startsWith('data:')) {
+        base64 = src.split(',')[1] || ''
+      } else {
+        const imgRes = await fetch(src)
+        const blob = await imgRes.blob()
+        base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+          reader.readAsDataURL(blob)
+        })
+      }
+
+      const res = await fetch('/api/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      })
+
+      if (!res.ok) throw new Error('실패')
+      const data = await res.json()
+      if (data.image) {
+        update({ src: data.image })
+      } else {
+        alert(data.error || '배경 제거에 실패했습니다.')
+      }
+    } catch (err) {
+      console.error('[Remove BG]', err)
+      alert('배경 제거 실패. 다시 시도해주세요.')
+    } finally {
+      setIsRemovingBg(false)
+    }
+  }
+
   const isLocalFile = element.src.startsWith('data:')
   const isProduct = element.src === 'product'
   const isGenerate = element.src.startsWith('generate:')
   const isUrl = !isProduct && !isGenerate && !isLocalFile && element.src.length > 0
   const hasImage = isLocalFile || isUrl || isProduct
+  const canRemoveBg = hasImage && !isGenerate
 
   return (
     <div className="space-y-4">
@@ -90,6 +134,21 @@ export function ImagePanel({ element, sectionId }: ImagePanelProps) {
         <div className="border rounded-lg overflow-hidden bg-gray-50">
           <img src={element.src} alt="" className="w-full h-32 object-contain" />
         </div>
+      )}
+
+      {/* 누끼 따기 */}
+      {canRemoveBg && (
+        <button
+          onClick={handleRemoveBg}
+          disabled={isRemovingBg}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-emerald-200 text-emerald-600 text-xs font-semibold hover:bg-emerald-50 disabled:opacity-50 transition-all"
+        >
+          {isRemovingBg ? (
+            <><Loader2 size={14} className="animate-spin" /> 누끼 따는 중... (20~30초)</>
+          ) : (
+            <><Scissors size={14} /> 누끼 따기 (배경 제거)</>
+          )}
+        </button>
       )}
 
       {/* AI 이미지 생성 (generate: 마커일 때) */}
