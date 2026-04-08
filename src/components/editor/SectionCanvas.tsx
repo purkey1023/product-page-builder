@@ -80,6 +80,7 @@ export function SectionCanvas({ section, productImageUrl, onRegisterRef }: Secti
         style={{
           width: CANVAS_WIDTH,
           height: section.height,
+          isolation: 'isolate',
           ...bgStyle,
         }}
         onClick={handleSectionClick}

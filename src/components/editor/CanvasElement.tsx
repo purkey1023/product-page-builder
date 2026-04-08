@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef, useEffect } from 'react'
 import { Rnd } from 'react-rnd'
 import { useEditorStore } from '@/store/editorStore'
 import type { SectionElement, TextElement, ImageElement, ShapeElement } from '@/types'
@@ -198,11 +198,21 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
     }
   }
 
-  // DOM 렌더링 순서 = 레이어 순서 (배열 뒤쪽이 위에 보임)
-  // z-index 대신 DOM order로 stacking 제어 (transform stacking context 문제 회피)
+  const zIndex = layerIndex + 1
+  const rndRef = useRef<Rnd>(null)
+
+  // z-index 적용 + transform → left/top 변환
+  useEffect(() => {
+    const el = rndRef.current?.getSelfElement?.()
+    if (!el) return
+    el.style.zIndex = String(zIndex)
+    el.style.left = `${element.x}px`
+    el.style.top = `${element.y}px`
+  }, [zIndex, element.x, element.y])
 
   return (
     <Rnd
+      ref={rndRef}
       position={{ x: element.x, y: element.y }}
       size={{ width: element.width, height: element.height }}
       onDragStop={handleDragStop}
@@ -212,7 +222,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ background: 'transparent' }}
+      style={{ background: 'transparent', zIndex, position: 'absolute' as const }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
