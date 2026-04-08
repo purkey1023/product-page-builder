@@ -138,6 +138,20 @@ export interface ProjectFormValues {
 }
 
 // ──────────────────────────────────────
+// 멀티 이미지 업로드
+// ──────────────────────────────────────
+export type ImageCategory = 'product' | 'model' | 'texture' | 'ingredient' | 'lifestyle' | 'detail' | 'background'
+
+export interface UploadedImage {
+  id: string
+  previewUrl: string
+  dataUrl: string
+  category?: ImageCategory
+  suggestedSection?: string
+  analysis?: string
+}
+
+// ──────────────────────────────────────
 // AI 응답 구조 (Claude JSON)
 // ──────────────────────────────────────
 export interface GeneratedElementData {
