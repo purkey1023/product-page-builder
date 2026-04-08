@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useEffect } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Rnd } from 'react-rnd'
 import { useEditorStore } from '@/store/editorStore'
 import type { SectionElement, TextElement, ImageElement, ShapeElement } from '@/types'
@@ -198,18 +198,11 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
     }
   }
 
-  // 항상 실제 레이어 순서 반영 (선택 시에도 z-index 999 사용 안 함)
-  const zIndex = layerIndex + 1
-  const rndRef = useRef<Rnd>(null)
-
-  useEffect(() => {
-    const el = rndRef.current?.getSelfElement?.()
-    if (el) el.style.zIndex = String(zIndex)
-  }, [zIndex])
+  // DOM 렌더링 순서 = 레이어 순서 (배열 뒤쪽이 위에 보임)
+  // z-index 대신 DOM order로 stacking 제어 (transform stacking context 문제 회피)
 
   return (
     <Rnd
-      ref={rndRef}
       position={{ x: element.x, y: element.y }}
       size={{ width: element.width, height: element.height }}
       onDragStop={handleDragStop}
@@ -219,7 +212,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ zIndex, background: 'transparent' }}
+      style={{ background: 'transparent' }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
