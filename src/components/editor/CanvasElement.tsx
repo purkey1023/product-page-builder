@@ -198,10 +198,10 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
     }
   }
 
-  const zIndex = isSelected ? 999 : layerIndex + 1
+  // 항상 실제 레이어 순서 반영 (선택 시에도 z-index 999 사용 안 함)
+  const zIndex = layerIndex + 1
   const rndRef = useRef<Rnd>(null)
 
-  // react-rnd DOM에 직접 z-index 적용
   useEffect(() => {
     const el = rndRef.current?.getSelfElement?.()
     if (el) el.style.zIndex = String(zIndex)
@@ -228,7 +228,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
       }}
     >
       <div
-        className={`w-full h-full ${
+        className={`w-full h-full relative ${
           isSelected && !isEditing ? 'outline outline-2 outline-blue-500 outline-offset-1' : ''
         } ${isEditing ? 'outline outline-2 outline-green-500 outline-offset-1' : ''}`}
         style={{ background: 'transparent' }}
