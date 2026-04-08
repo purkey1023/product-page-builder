@@ -54,6 +54,8 @@ export function PropertyPanel() {
           <PositionPanel
             element={selectedElement}
             sectionId={selectedSectionId!}
+            layerIndex={selectedSection.elements.findIndex((el) => el.id === selectedElement.id)}
+            totalLayers={selectedSection.elements.length}
           />
         </div>
 

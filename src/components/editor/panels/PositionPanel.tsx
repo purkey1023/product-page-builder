@@ -7,9 +7,11 @@ import type { SectionElement } from '@/types'
 interface PositionPanelProps {
   element: SectionElement
   sectionId: string
+  layerIndex?: number
+  totalLayers?: number
 }
 
-export function PositionPanel({ element, sectionId }: PositionPanelProps) {
+export function PositionPanel({ element, sectionId, layerIndex, totalLayers }: PositionPanelProps) {
   const updateElement = useEditorStore((s) => s.updateElement)
   const bringToFront = useEditorStore((s) => s.bringToFront)
   const sendToBack = useEditorStore((s) => s.sendToBack)
@@ -60,7 +62,12 @@ export function PositionPanel({ element, sectionId }: PositionPanelProps) {
 
       {/* 레이어 순서 */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">레이어 순서</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+          레이어 순서
+          {layerIndex !== undefined && totalLayers !== undefined && (
+            <span className="ml-2 text-blue-500 font-normal">({layerIndex + 1} / {totalLayers})</span>
+          )}
+        </p>
         <div className="flex gap-1">
           <button
             onClick={() => sendToBack(sectionId, element.id)}
