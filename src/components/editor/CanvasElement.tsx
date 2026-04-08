@@ -199,24 +199,68 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
   }
 
   const zIndex = layerIndex + 1
+  const isDragging = useRef(false)
   const rndRef = useRef<Rnd>(null)
 
-  // z-index 적용 + transform → left/top 변환
+  // 드래그/리사이즈 중이 아닐 때만 transform 제거 + left/top 적용
   useEffect(() => {
+    if (isDragging.current) return
     const el = rndRef.current?.getSelfElement?.()
     if (!el) return
     el.style.zIndex = String(zIndex)
+    el.style.transform = 'none'
     el.style.left = `${element.x}px`
     el.style.top = `${element.y}px`
-  }, [zIndex, element.x, element.y])
+  })
+
+  const handleDragStart = useCallback(() => {
+    isDragging.current = true
+    // 드래그 시작 시 transform 허용을 위해 left/top 제거
+    const el = rndRef.current?.getSelfElement?.()
+    if (el) {
+      el.style.left = ''
+      el.style.top = ''
+    }
+  }, [])
+
+  const handleInternalDragStop = useCallback(
+    (_e: unknown, d: { x: number; y: number }) => {
+      isDragging.current = false
+      moveElement(sectionId, element.id, Math.round(d.x), Math.round(d.y))
+    },
+    [sectionId, element.id, moveElement]
+  )
+
+  const handleResizeStart = useCallback(() => {
+    isDragging.current = true
+    const el = rndRef.current?.getSelfElement?.()
+    if (el) {
+      el.style.left = ''
+      el.style.top = ''
+    }
+  }, [])
+
+  const handleInternalResizeStop = useCallback(
+    (_e: unknown, _dir: unknown, ref: HTMLElement, _delta: unknown, pos: { x: number; y: number }) => {
+      isDragging.current = false
+      resizeElement(
+        sectionId, element.id,
+        Math.round(ref.offsetWidth), Math.round(ref.offsetHeight),
+        Math.round(pos.x), Math.round(pos.y)
+      )
+    },
+    [sectionId, element.id, resizeElement]
+  )
 
   return (
     <Rnd
       ref={rndRef}
       position={{ x: element.x, y: element.y }}
       size={{ width: element.width, height: element.height }}
-      onDragStop={handleDragStop}
-      onResizeStop={handleResizeStop}
+      onDragStart={handleDragStart}
+      onDragStop={handleInternalDragStop}
+      onResizeStart={handleResizeStart}
+      onResizeStop={handleInternalResizeStop}
       bounds="parent"
       disableDragging={element.locked || isEditing}
       enableResizing={isSelected && !element.locked && !isEditing}

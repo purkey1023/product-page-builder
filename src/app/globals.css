@@ -129,8 +129,3 @@
   }
 }
 
-/* react-rnd: transform → top/left 변환으로 z-index stacking 정상화 */
-[data-section-bg="true"] > .react-draggable {
-  transform: none !important;
-  -webkit-transform: none !important;
-}
