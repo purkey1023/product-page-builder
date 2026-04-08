@@ -103,12 +103,13 @@ export function SectionCanvas({ section, productImageUrl, onRegisterRef }: Secti
         )}
 
         {/* Elements */}
-        {section.elements.map((element) => (
+        {section.elements.map((element, index) => (
           <CanvasElement
             key={element.id}
             element={element}
             sectionId={section.id}
             productImageUrl={productImageUrl}
+            layerIndex={index}
           />
         ))}
       </div>

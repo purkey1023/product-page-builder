@@ -67,6 +67,12 @@ interface EditorActions {
   resizeElement: (sectionId: string, elementId: string, w: number, h: number, x: number, y: number) => void
   duplicateElement: (sectionId: string, elementId: string) => void
 
+  // Layer order
+  bringToFront: (sectionId: string, elementId: string) => void
+  sendToBack: (sectionId: string, elementId: string) => void
+  bringForward: (sectionId: string, elementId: string) => void
+  sendBackward: (sectionId: string, elementId: string) => void
+
   // Text editing
   startTextEditing: (elementId: string) => void
   stopTextEditing: () => void
@@ -362,6 +368,65 @@ export const useEditorStore = create<EditorStore>()(
             isDirty: true, ...pushHistory(state),
             selectedElementId: newEl.id,
             project: updateSectionElements(state.project, sectionId, (els) => [...els, newEl]),
+          }
+        }),
+
+      // ── Layer order ──
+      bringToFront: (sectionId, elementId) =>
+        set((state) => {
+          if (!state.project) return {}
+          return {
+            isDirty: true, ...pushHistory(state),
+            project: updateSectionElements(state.project, sectionId, (els) => {
+              const idx = els.findIndex((e) => e.id === elementId)
+              if (idx === -1 || idx === els.length - 1) return els
+              const item = els[idx]
+              return [...els.slice(0, idx), ...els.slice(idx + 1), item]
+            }),
+          }
+        }),
+
+      sendToBack: (sectionId, elementId) =>
+        set((state) => {
+          if (!state.project) return {}
+          return {
+            isDirty: true, ...pushHistory(state),
+            project: updateSectionElements(state.project, sectionId, (els) => {
+              const idx = els.findIndex((e) => e.id === elementId)
+              if (idx <= 0) return els
+              const item = els[idx]
+              return [item, ...els.slice(0, idx), ...els.slice(idx + 1)]
+            }),
+          }
+        }),
+
+      bringForward: (sectionId, elementId) =>
+        set((state) => {
+          if (!state.project) return {}
+          return {
+            isDirty: true, ...pushHistory(state),
+            project: updateSectionElements(state.project, sectionId, (els) => {
+              const idx = els.findIndex((e) => e.id === elementId)
+              if (idx === -1 || idx === els.length - 1) return els
+              const copy = [...els]
+              ;[copy[idx], copy[idx + 1]] = [copy[idx + 1], copy[idx]]
+              return copy
+            }),
+          }
+        }),
+
+      sendBackward: (sectionId, elementId) =>
+        set((state) => {
+          if (!state.project) return {}
+          return {
+            isDirty: true, ...pushHistory(state),
+            project: updateSectionElements(state.project, sectionId, (els) => {
+              const idx = els.findIndex((e) => e.id === elementId)
+              if (idx <= 0) return els
+              const copy = [...els]
+              ;[copy[idx - 1], copy[idx]] = [copy[idx], copy[idx - 1]]
+              return copy
+            }),
           }
         }),
 

@@ -9,9 +9,10 @@ interface CanvasElementProps {
   element: SectionElement
   sectionId: string
   productImageUrl: string
+  layerIndex: number
 }
 
-export function CanvasElement({ element, sectionId, productImageUrl }: CanvasElementProps) {
+export function CanvasElement({ element, sectionId, productImageUrl, layerIndex }: CanvasElementProps) {
   const selectedElementId = useEditorStore((s) => s.selectedElementId)
   const editingTextId = useEditorStore((s) => s.editingTextId)
   const selectElement = useEditorStore((s) => s.selectElement)
@@ -208,7 +209,7 @@ export function CanvasElement({ element, sectionId, productImageUrl }: CanvasEle
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ zIndex: isSelected ? 100 : 1, background: 'transparent' }}
+      style={{ zIndex: isSelected ? 999 : layerIndex + 1, background: 'transparent' }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
