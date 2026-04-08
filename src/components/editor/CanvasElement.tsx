@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef, useEffect } from 'react'
 import { Rnd } from 'react-rnd'
 import { useEditorStore } from '@/store/editorStore'
 import type { SectionElement, TextElement, ImageElement, ShapeElement } from '@/types'
@@ -198,8 +198,18 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
     }
   }
 
+  const zIndex = isSelected ? 999 : layerIndex + 1
+  const rndRef = useRef<Rnd>(null)
+
+  // react-rnd DOM에 직접 z-index 적용
+  useEffect(() => {
+    const el = rndRef.current?.getSelfElement?.()
+    if (el) el.style.zIndex = String(zIndex)
+  }, [zIndex])
+
   return (
     <Rnd
+      ref={rndRef}
       position={{ x: element.x, y: element.y }}
       size={{ width: element.width, height: element.height }}
       onDragStop={handleDragStop}
@@ -209,7 +219,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ zIndex: isSelected ? 999 : layerIndex + 1, background: 'transparent' }}
+      style={{ zIndex, background: 'transparent' }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
