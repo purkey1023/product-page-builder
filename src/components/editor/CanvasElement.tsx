@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useEffect } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Rnd } from 'react-rnd'
 import { useEditorStore } from '@/store/editorStore'
 import type { SectionElement, TextElement, ImageElement, ShapeElement } from '@/types'
@@ -115,7 +115,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
         }
         return (
           <div
-            className="w-full h-full pointer-events-none select-none"
+            className="w-full h-full select-none"
             style={{
               fontSize: el.fontSize,
               fontWeight: el.fontWeight,
@@ -167,7 +167,6 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
           <img
             src={resolvedSrc}
             alt=""
-            className="pointer-events-none"
             crossOrigin="anonymous"
             style={{
               width: '100%',
@@ -185,7 +184,7 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
         const el = element as ShapeElement
         return (
           <div
-            className="w-full h-full pointer-events-none"
+            className="w-full h-full"
             style={{
               backgroundColor: el.backgroundColor,
               borderRadius: el.shapeType === 'circle' ? '50%' : el.borderRadius,
@@ -199,74 +198,19 @@ export function CanvasElement({ element, sectionId, productImageUrl, layerIndex 
   }
 
   const zIndex = layerIndex + 1
-  const isDragging = useRef(false)
-  const rndRef = useRef<Rnd>(null)
-
-  // 드래그/리사이즈 중이 아닐 때만 transform 제거 + left/top 적용
-  useEffect(() => {
-    if (isDragging.current) return
-    const el = rndRef.current?.getSelfElement?.()
-    if (!el) return
-    el.style.zIndex = String(zIndex)
-    el.style.transform = 'none'
-    el.style.left = `${element.x}px`
-    el.style.top = `${element.y}px`
-  })
-
-  const handleDragStart = useCallback(() => {
-    isDragging.current = true
-    // 드래그 시작 시 transform 허용을 위해 left/top 제거
-    const el = rndRef.current?.getSelfElement?.()
-    if (el) {
-      el.style.left = ''
-      el.style.top = ''
-    }
-  }, [])
-
-  const handleInternalDragStop = useCallback(
-    (_e: unknown, d: { x: number; y: number }) => {
-      isDragging.current = false
-      moveElement(sectionId, element.id, Math.round(d.x), Math.round(d.y))
-    },
-    [sectionId, element.id, moveElement]
-  )
-
-  const handleResizeStart = useCallback(() => {
-    isDragging.current = true
-    const el = rndRef.current?.getSelfElement?.()
-    if (el) {
-      el.style.left = ''
-      el.style.top = ''
-    }
-  }, [])
-
-  const handleInternalResizeStop = useCallback(
-    (_e: unknown, _dir: unknown, ref: HTMLElement, _delta: unknown, pos: { x: number; y: number }) => {
-      isDragging.current = false
-      resizeElement(
-        sectionId, element.id,
-        Math.round(ref.offsetWidth), Math.round(ref.offsetHeight),
-        Math.round(pos.x), Math.round(pos.y)
-      )
-    },
-    [sectionId, element.id, resizeElement]
-  )
 
   return (
     <Rnd
-      ref={rndRef}
       position={{ x: element.x, y: element.y }}
       size={{ width: element.width, height: element.height }}
-      onDragStart={handleDragStart}
-      onDragStop={handleInternalDragStop}
-      onResizeStart={handleResizeStart}
-      onResizeStop={handleInternalResizeStop}
+      onDragStop={handleDragStop}
+      onResizeStop={handleResizeStop}
       bounds="parent"
       disableDragging={element.locked || isEditing}
       enableResizing={isSelected && !element.locked && !isEditing}
       minWidth={20}
       minHeight={10}
-      style={{ background: 'transparent', zIndex, position: 'absolute' as const }}
+      style={{ background: 'transparent', zIndex }}
       resizeHandleStyles={{
         topLeft: handleStyle,
         topRight: handleStyle,
