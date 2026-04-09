@@ -105,8 +105,19 @@ const W = 780
 // ──────────────────────────────────────
 // ANUA 수준 섹션별 기본 엘리먼트
 // ──────────────────────────────────────
-function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[] {
+export interface ProductContext {
+  name?: string
+  category?: string
+  keyPoints?: string[]
+}
+
+function getDefaultElements(type: SectionType, mood: MoodType, product?: ProductContext): SectionElement[] {
   const p = MOOD_PALETTES[mood]
+  const pName = product?.name || '제품명을 입력하세요'
+  const pCat = product?.category || '뷰티/스킨케어'
+  const kp1 = product?.keyPoints?.[0] || '첫 번째 핵심 장점'
+  const kp2 = product?.keyPoints?.[1] || '두 번째 핵심 장점'
+  const kp3 = product?.keyPoints?.[2] || '세 번째 핵심 장점'
   const els: SectionElement[] = []
 
   switch (type) {
@@ -115,8 +126,8 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
     case 'hero':
       // 텍스트 zone: y:40~280
       els.push(makeText('BRAND NAME', 40, 50, 700, 20, { fontSize: 12, fontWeight: 400, color: p.textMuted, textAlign: 'center', letterSpacing: 6, fontFamily: 'Playfair Display' }))
-      els.push(makeText('제품명을 입력하세요', 40, 85, 700, 70, { fontSize: 40, fontWeight: 300, color: p.text, textAlign: 'center', lineHeight: 1.3 }))
-      els.push(makeText('핵심 소구 포인트를 한 줄로', 40, 170, 700, 28, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
+      els.push(makeText(pName, 40, 85, 700, 70, { fontSize: 40, fontWeight: 300, color: p.text, textAlign: 'center', lineHeight: 1.3 }))
+      els.push(makeText(kp1, 40, 170, 700, 28, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
       els.push(makeShape('line', 340, 215, 100, 2, { backgroundColor: p.accent }))
       els.push(makeShape('rect', 280, 235, 220, 32, { backgroundColor: p.accentBg, borderRadius: 16 }))
       els.push(makeText('★★★★★  4.9  (2,847 리뷰)', 280, 241, 220, 20, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
@@ -124,11 +135,11 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
       els.push(makeImage('product', 165, 300, 450, 580))
       // 키워드 zone: y:910~960
       els.push(makeShape('rect', 80, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText('#키워드1', 80, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeText(`#${kp1}`, 80, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
       els.push(makeShape('rect', 300, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText('#키워드2', 300, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeText(`#${kp2}`, 300, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
       els.push(makeShape('rect', 520, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText('#키워드3', 520, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeText(`#${kp3}`, 520, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
       // 감성 카피: y:980
       els.push(makeText('피부 본연의 힘을 깨우다', 40, 980, 700, 40, { fontSize: 20, fontWeight: 300, color: p.textMuted, textAlign: 'center', letterSpacing: 2 }))
       break
@@ -156,19 +167,19 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
       els.push(makeImage('generate:lifestyle', 40, 200, 340, 340, { borderRadius: 16, objectFit: 'cover' }))
       els.push(makeShape('circle', 420, 220, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
       els.push(makeText('01', 420, 228, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('첫 번째 핵심 장점', 470, 224, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText(kp1, 470, 224, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
       els.push(makeText('피부에 즉각적인 변화를 느낄 수 있습니다.\n가볍게 바르기만 해도 깊은 보습이\n오래도록 지속됩니다.', 420, 280, 320, 120, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
       // 장점 2 - 좌 텍스트(x:40~380) + 우 이미지(x:400~740) — 좌우 반전
       els.push(makeShape('circle', 40, 600, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
       els.push(makeText('02', 40, 608, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('두 번째 핵심 장점', 90, 604, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText(kp2, 90, 604, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
       els.push(makeText('자연 유래 성분이 피부 깊숙이 스며들어\n건강한 피부 장벽을 형성합니다.\n민감한 피부도 안심합니다.', 40, 660, 340, 120, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
       els.push(makeImage('generate:ingredient', 400, 580, 340, 340, { borderRadius: 16, objectFit: 'cover' }))
       // 장점 3 - 풀폭 카드
       els.push(makeShape('rect', 40, 980, 700, 160, { backgroundColor: p.accentBg, borderRadius: 16 }))
       els.push(makeShape('circle', 70, 1010, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
       els.push(makeText('03', 70, 1018, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('세 번째 핵심 장점', 120, 1014, 400, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText(kp3, 120, 1014, 400, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
       els.push(makeText('매일 사용할수록 피부 톤이 맑아지고\n탄력이 개선됩니다.', 120, 1060, 580, 60, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
       // 하단
       els.push(makeText('단 하나의 제품으로, 세 가지 효과를 한번에', 40, 1200, 700, 36, { fontSize: 17, fontWeight: 500, color: p.text, textAlign: 'center' }))
@@ -320,7 +331,7 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
       els.push(makeShape('rect', 350, 220, 370, 400, { backgroundColor: p.bgAlt, borderRadius: 12 }))
       // 스펙 항목들
       const specs = [
-        ['제품명', '제품명을 입력하세요'],
+        ['제품명', pName],
         ['용량', '000ml / 000g'],
         ['제조국', '대한민국'],
         ['사용기한', '제조일로부터 12개월'],
@@ -400,7 +411,7 @@ function makeShape(
 // ──────────────────────────────────────
 // 기본 섹션 생성
 // ──────────────────────────────────────
-export function getDefaultSection(type: SectionType, mood: MoodType): Section {
+export function getDefaultSection(type: SectionType, mood: MoodType, product?: ProductContext): Section {
   return {
     id: uuidv4(),
     type,
@@ -408,7 +419,7 @@ export function getDefaultSection(type: SectionType, mood: MoodType): Section {
     order: 0,
     height: DEFAULT_HEIGHTS[type],
     background: getDefaultBackground(type, mood),
-    elements: getDefaultElements(type, mood),
+    elements: getDefaultElements(type, mood, product),
     isVisible: true,
   }
 }

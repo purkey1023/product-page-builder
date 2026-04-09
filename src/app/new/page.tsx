@@ -404,13 +404,14 @@ export default function NewProjectPage() {
   // 공통 헬퍼
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function buildSections(contentRes: PromiseSettledResult<Response>, mood: MoodType): Promise<Section[]> {
+    const productCtx = { name: productName, category, keyPoints: [kp1, kp2, kp3] }
     if (contentRes.status === 'fulfilled' && contentRes.value.ok) {
       const data = await contentRes.value.json()
       if (data.sections?.length) {
         return buildSectionsFromGenerated(data.sections as GeneratedSectionData[], mood)
       }
     }
-    return ALL_SECTION_TYPES.map((type, i) => ({ ...getDefaultSection(type, mood), order: i }))
+    return ALL_SECTION_TYPES.map((type, i) => ({ ...getDefaultSection(type, mood, productCtx), order: i }))
   }
 
   async function extractAiImages(imageRes: PromiseSettledResult<Response>): Promise<Record<string, string>> {
