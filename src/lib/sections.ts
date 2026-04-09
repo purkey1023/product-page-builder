@@ -443,7 +443,7 @@ function buildElement(data: GeneratedElementData): SectionElement {
     case 'text':
       return { ...base, type: 'text', content: data.content ?? '', fontSize: data.fontSize ?? 16, fontWeight: data.fontWeight ?? 400, fontFamily: data.fontFamily ?? 'Noto Sans KR', color: data.color ?? '#333333', textAlign: data.textAlign ?? 'center', lineHeight: data.lineHeight ?? 1.5, letterSpacing: data.letterSpacing ?? 0 } as TextElement
     case 'image':
-      return { ...base, type: 'image', src: data.src ?? 'product', objectFit: data.objectFit ?? 'contain', borderRadius: data.borderRadius ?? 0 } as ImageElement
+      return { ...base, type: 'image', src: data.src ?? 'product', objectFit: data.objectFit ?? 'contain', borderRadius: Math.min(data.borderRadius ?? 0, 30) } as ImageElement
     case 'shape':
       return { ...base, type: 'shape', shapeType: (data.shapeType as ShapeElement['shapeType']) ?? 'rect', backgroundColor: data.backgroundColor ?? '#F0F0F0', borderColor: data.borderColor ?? 'transparent', borderWidth: data.borderWidth ?? 0, borderRadius: data.borderRadius ?? 0 } as ShapeElement
     default:
