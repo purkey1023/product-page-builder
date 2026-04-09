@@ -234,48 +234,72 @@ export default function NewProjectPage() {
 
       // 카테고리별 이미지 URL 그룹
       const categoryImages: Record<string, string[]> = {}
-      for (const a of analyzed) {
-        const url = imageUrlMap.get(a.id)
-        if (!url) continue
-        if (!categoryImages[a.category]) categoryImages[a.category] = []
-        categoryImages[a.category].push(url)
+      if (analyzed.length > 0) {
+        for (const a of analyzed) {
+          const url = imageUrlMap.get(a.id)
+          if (!url) continue
+          if (!categoryImages[a.category]) categoryImages[a.category] = []
+          categoryImages[a.category].push(url)
+        }
+      } else {
+        // 분석 실패 시: 모든 이미지를 순서대로 다양한 카테고리에 분배
+        const fallbackCats: ImageCategory[] = ['product', 'lifestyle', 'texture', 'ingredient', 'model', 'background', 'detail']
+        uploadedUrls.forEach((url, i) => {
+          const cat = fallbackCats[i % fallbackCats.length]
+          if (!categoryImages[cat]) categoryImages[cat] = []
+          categoryImages[cat].push(url)
+        })
       }
+
+      console.log('[Multi] 카테고리 분류:', Object.entries(categoryImages).map(([k, v]) => `${k}:${v.length}`).join(', '))
 
       // 4. 섹션 생성
       let sections = await buildSections(contentRes, mood)
 
       // 5. 분석 결과에 따라 이미지 → 섹션 배치
-      const sectionImageMapping: Record<string, { elementSrc?: string; bgImage?: string }> = {}
+      const productImgs = [...(categoryImages['product'] || [])]
+      const modelImgs = [...(categoryImages['model'] || [])]
+      const textureImgs = [...(categoryImages['texture'] || [])]
+      const ingredientImgs = [...(categoryImages['ingredient'] || [])]
+      const lifestyleImgs = [...(categoryImages['lifestyle'] || [])]
+      const backgroundImgs = [...(categoryImages['background'] || [])]
+      const detailImgs = [...(categoryImages['detail'] || [])]
 
-      // product → hero, specs, cta의 'product' 마커
-      const productImgs = categoryImages['product'] || [mainImageUrl]
-      // model → hero 배경 또는 lifestyle 영역
-      const modelImgs = categoryImages['model'] || []
-      // texture → texture 섹션 배경
-      const textureImgs = categoryImages['texture'] || []
-      // ingredient → ingredients 카드
-      const ingredientImgs = categoryImages['ingredient'] || []
-      // lifestyle → benefits 교차 레이아웃
-      const lifestyleImgs = categoryImages['lifestyle'] || []
-      // background → banner, cta 배경
-      const backgroundImgs = categoryImages['background'] || []
-      // detail → proof, howto
-      const detailImgs = categoryImages['detail'] || []
+      // 남은 이미지 풀 (어떤 카테고리든 사용 가능)
+      const allRemainingImgs = [...uploadedUrls]
+      const usedUrls = new Set<string>()
 
-      // 남은 AI 생성 필요 스타일
+      // 다음 사용 가능한 이미지를 가져오는 헬퍼
+      const popImg = (arr: string[]): string | null => {
+        while (arr.length > 0) {
+          const url = arr.shift()!
+          if (!usedUrls.has(url)) { usedUrls.add(url); return url }
+        }
+        return null
+      }
+      const popAnyRemaining = (): string | null => {
+        for (const url of allRemainingImgs) {
+          if (!usedUrls.has(url)) { usedUrls.add(url); return url }
+        }
+        return null
+      }
+
       const needAiStyles: string[] = []
 
       for (const section of sections) {
         // 섹션 배경 이미지 배치
-        if (section.type === 'texture' && textureImgs.length > 0) {
-          section.background = { type: 'image', value: textureImgs.shift()!, overlay: 'rgba(0,0,0,0.15)' }
-        } else if (section.type === 'banner' && (backgroundImgs.length > 0 || modelImgs.length > 1)) {
-          const bgUrl = backgroundImgs.shift() || modelImgs.pop()
-          if (bgUrl) section.background = { type: 'image', value: bgUrl, overlay: 'rgba(0,0,0,0.4)' }
-        } else if (section.type === 'cta' && backgroundImgs.length > 0) {
-          section.background = { type: 'image', value: backgroundImgs.shift()!, overlay: 'rgba(0,0,0,0.5)' }
-        } else if (section.type === 'hero' && modelImgs.length > 0) {
-          section.background = { type: 'image', value: modelImgs.shift()!, overlay: 'rgba(0,0,0,0.1)' }
+        if (section.type === 'texture') {
+          const url = popImg(textureImgs) || popImg(detailImgs)
+          if (url) section.background = { type: 'image', value: url, overlay: 'rgba(0,0,0,0.15)' }
+        } else if (section.type === 'banner') {
+          const url = popImg(backgroundImgs) || popImg(modelImgs)
+          if (url) section.background = { type: 'image', value: url, overlay: 'rgba(0,0,0,0.4)' }
+        } else if (section.type === 'cta') {
+          const url = popImg(backgroundImgs) || popAnyRemaining()
+          if (url) section.background = { type: 'image', value: url, overlay: 'rgba(0,0,0,0.5)' }
+        } else if (section.type === 'hero') {
+          const url = popImg(modelImgs) || popImg(lifestyleImgs)
+          if (url) section.background = { type: 'image', value: url, overlay: 'rgba(0,0,0,0.1)' }
         }
 
         // 엘리먼트 이미지 배치
@@ -283,31 +307,26 @@ export default function NewProjectPage() {
           if (el.type !== 'image') continue
 
           if (el.src === 'product') {
-            if (productImgs.length > 0) el.src = productImgs[0]
+            // product 이미지를 순차 소비, 없으면 대표 이미지
+            const url = popImg(productImgs)
+            if (url) el.src = url
             else if (mainImageUrl) el.src = mainImageUrl
           } else if (el.src.startsWith('generate:')) {
             const style = el.src.replace('generate:', '')
-            let matched = false
+            let url: string | null = null
 
-            if (style === 'lifestyle' && lifestyleImgs.length > 0) {
-              el.src = lifestyleImgs.shift()!
-              matched = true
-            } else if (style === 'ingredient' && ingredientImgs.length > 0) {
-              el.src = ingredientImgs.shift()!
-              matched = true
-            } else if (style === 'texture' && textureImgs.length > 0) {
-              el.src = textureImgs.shift()!
-              matched = true
-            } else if (style === 'lifestyle' && modelImgs.length > 0) {
-              el.src = modelImgs.shift()!
-              matched = true
-            } else if (detailImgs.length > 0) {
-              el.src = detailImgs.shift()!
-              matched = true
-            }
+            // 스타일 매칭 우선순위
+            if (style === 'lifestyle') url = popImg(lifestyleImgs) || popImg(modelImgs)
+            else if (style === 'ingredient') url = popImg(ingredientImgs)
+            else if (style === 'texture') url = popImg(textureImgs)
+            else if (style === 'banner') url = popImg(backgroundImgs)
 
-            // 매칭 안 된 건 AI 생성 대상
-            if (!matched && !needAiStyles.includes(style)) {
+            // 매칭 실패 시 남은 이미지 아무거나 사용
+            if (!url) url = popAnyRemaining()
+
+            if (url) {
+              el.src = url
+            } else if (!needAiStyles.includes(style)) {
               needAiStyles.push(style)
             }
           }
