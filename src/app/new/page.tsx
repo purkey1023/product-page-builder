@@ -204,11 +204,23 @@ export default function NewProjectPage() {
         base64: img.dataUrl.split(',')[1] || '',
       }))
 
+      // 섹션별 텍스트 컨텍스트 (이미지 매칭 정확도 향상)
+      const sectionTexts = [
+        { sectionType: 'hero', label: '히어로', texts: [productName, kp1] },
+        { sectionType: 'benefits-01', label: `핵심 장점 1: ${kp1}`, texts: [kp1] },
+        { sectionType: 'benefits-02', label: `핵심 장점 2: ${kp2}`, texts: [kp2] },
+        { sectionType: 'ingredients', label: '핵심 성분', texts: [kp1, kp2, kp3] },
+        { sectionType: 'texture', label: '텍스처', texts: ['텍스처', '제형', '사용감'] },
+        { sectionType: 'banner', label: '비주얼 배너', texts: ['감성', '브랜드'] },
+        { sectionType: 'specs', label: '제품 정보', texts: [productName] },
+        { sectionType: 'cta', label: 'CTA', texts: ['구매', productName] },
+      ]
+
       const [analyzeRes, contentRes] = await Promise.allSettled([
         fetch('/api/analyze-images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: imagesForAnalysis, productName, category }),
+          body: JSON.stringify({ images: imagesForAnalysis, productName, category, sectionTexts }),
         }),
         fetch('/api/generate', {
           method: 'POST',
@@ -220,133 +232,85 @@ export default function NewProjectPage() {
       // 3. 분석 결과 파싱
       setLoadingStatus('이미지를 섹션에 배치하고 있어요...')
 
-      interface AnalyzedImg { id: string; category: ImageCategory; suggestedSection: string; analysis: string }
+      interface AnalyzedImg { id: string; category: ImageCategory; suggestedSection: string; slotKey?: string; analysis: string }
       let analyzed: AnalyzedImg[] = []
       if (analyzeRes.status === 'fulfilled' && analyzeRes.value.ok) {
         const data = await analyzeRes.value.json()
         analyzed = data.images || []
-        console.log('[Multi] 분석 결과:', analyzed.map(a => `${a.category}→${a.suggestedSection}`).join(', '))
+        console.log('[Multi] 매칭:', analyzed.map(a => `${a.id}→${a.slotKey || a.suggestedSection}`).join(', '))
       }
 
-      // 분석 결과를 multiImages에 합치기
+      // slotKey → 이미지 URL 매핑 (핵심!)
       const imageUrlMap = new Map<string, string>()
       multiImages.forEach((img, i) => imageUrlMap.set(img.id, uploadedUrls[i]))
 
-      // 카테고리별 이미지 URL 그룹
-      const categoryImages: Record<string, string[]> = {}
-      if (analyzed.length > 0) {
-        for (const a of analyzed) {
-          const url = imageUrlMap.get(a.id)
-          if (!url) continue
-          if (!categoryImages[a.category]) categoryImages[a.category] = []
-          categoryImages[a.category].push(url)
+      const slotToUrl = new Map<string, string>()
+      for (const a of analyzed) {
+        const url = imageUrlMap.get(a.id)
+        if (url && a.slotKey) {
+          slotToUrl.set(a.slotKey, url)
+          // suggestedSection으로도 매핑 (폴백)
+          if (!slotToUrl.has(a.suggestedSection)) {
+            slotToUrl.set(a.suggestedSection, url)
+          }
         }
-      } else {
-        // 분석 실패 시: 모든 이미지를 순서대로 다양한 카테고리에 분배
-        const fallbackCats: ImageCategory[] = ['product', 'lifestyle', 'texture', 'ingredient', 'model', 'background', 'detail']
-        uploadedUrls.forEach((url, i) => {
-          const cat = fallbackCats[i % fallbackCats.length]
-          if (!categoryImages[cat]) categoryImages[cat] = []
-          categoryImages[cat].push(url)
-        })
       }
-
-      console.log('[Multi] 카테고리 분류:', Object.entries(categoryImages).map(([k, v]) => `${k}:${v.length}`).join(', '))
 
       // 4. 섹션 생성
       let sections = await buildSections(contentRes, mood)
-
-      // 5. 분석 결과에 따라 이미지 → 섹션 배치
-      const productImgs = [...(categoryImages['product'] || [])]
-      const modelImgs = [...(categoryImages['model'] || [])]
-      const textureImgs = [...(categoryImages['texture'] || [])]
-      const ingredientImgs = [...(categoryImages['ingredient'] || [])]
-      const lifestyleImgs = [...(categoryImages['lifestyle'] || [])]
-      const backgroundImgs = [...(categoryImages['background'] || [])]
-      const detailImgs = [...(categoryImages['detail'] || [])]
-
-      // 남은 이미지 풀 (어떤 카테고리든 사용 가능)
-      const allRemainingImgs = [...uploadedUrls]
       const usedUrls = new Set<string>()
-
-      // 다음 사용 가능한 이미지를 가져오는 헬퍼
-      const popImg = (arr: string[]): string | null => {
-        while (arr.length > 0) {
-          const url = arr.shift()!
-          if (!usedUrls.has(url)) { usedUrls.add(url); return url }
-        }
-        return null
-      }
-      const popAnyRemaining = (): string | null => {
-        for (const url of allRemainingImgs) {
-          if (!usedUrls.has(url)) { usedUrls.add(url); return url }
-        }
-        return null
-      }
-
       const needAiStyles: string[] = []
 
-      // 배경 이미지는 texture/banner/cta만 — 나머지 섹션은 텍스트 가독성을 위해 배경 이미지 금지
-      const bgPriority: { type: string; sources: string[][]; overlay: string }[] = [
-        { type: 'texture', sources: [textureImgs, detailImgs], overlay: 'rgba(0,0,0,0.08)' },
-        { type: 'banner', sources: [backgroundImgs, modelImgs, lifestyleImgs], overlay: 'rgba(0,0,0,0.35)' },
-        { type: 'cta', sources: [backgroundImgs, textureImgs], overlay: 'rgba(0,0,0,0.45)' },
-      ]
+      // 5. slotKey 기반 이미지 → 섹션 매칭 (텍스트 맥락에 맞는 배치)
+      const bgOverlays: Record<string, string> = {
+        texture: 'rgba(0,0,0,0.08)',
+        banner: 'rgba(0,0,0,0.35)',
+        cta: 'rgba(0,0,0,0.45)',
+      }
 
       for (const section of sections) {
-        // 배경 이미지: texture/banner/cta만 허용
-        const bgConfig = bgPriority.find(b => b.type === section.type)
-        if (bgConfig) {
-          let bgUrl: string | null = null
-          for (const source of bgConfig.sources) {
-            bgUrl = popImg(source)
-            if (bgUrl) break
-          }
-          if (bgUrl) {
-            section.background = { type: 'image', value: bgUrl, overlay: bgConfig.overlay }
-          }
+        // 배경 이미지: slotKey에 "-bg" 포함된 것만
+        const bgSlot = `${section.type}-bg`
+        const bgUrl = slotToUrl.get(bgSlot)
+        if (bgUrl && bgOverlays[section.type] && !usedUrls.has(bgUrl)) {
+          section.background = { type: 'image', value: bgUrl, overlay: bgOverlays[section.type] }
+          usedUrls.add(bgUrl)
         }
 
-        // hero: 첫 번째 제품 이미지를 이미지 엘리먼트로 배치 (배경 아님)
-        if (section.type === 'hero') {
-          const heroImg = popImg(productImgs) || popImg(modelImgs) || popImg(lifestyleImgs)
-          if (heroImg) {
-            const hasImgEl = section.elements.some(el => el.type === 'image')
-            if (hasImgEl) {
-              const imgEl = section.elements.find(el => el.type === 'image' && ((el as import('@/types').ImageElement).src === 'product' || (el as import('@/types').ImageElement).src.startsWith('generate:')))
-              if (imgEl) (imgEl as import('@/types').ImageElement).src = heroImg
-            }
-          }
-        }
-
-        // 엘리먼트 이미지 배치
+        // 엘리먼트 이미지 배치 — slotKey 기반 매칭
+        let imgIndex = 0
         for (const el of section.elements) {
           if (el.type !== 'image') continue
+          const imgEl = el as import('@/types').ImageElement
 
-          if (el.src === 'product') {
-            // product 이미지를 순차 소비, 없으면 대표 이미지
-            const url = popImg(productImgs)
-            if (url) el.src = url
-            else if (mainImageUrl) el.src = mainImageUrl
-          } else if (el.src.startsWith('generate:')) {
-            const style = el.src.replace('generate:', '')
-            let url: string | null = null
+          // slotKey로 매칭 시도 (예: "benefits-01", "ingredients-02")
+          const slotKey1 = `${section.type}-${String(imgIndex + 1).padStart(2, '0')}`
+          const slotKey2 = `${section.type}-product`
+          const slotKey3 = section.type
 
-            // 스타일 매칭 우선순위
-            if (style === 'lifestyle') url = popImg(lifestyleImgs) || popImg(modelImgs)
-            else if (style === 'ingredient') url = popImg(ingredientImgs)
-            else if (style === 'texture') url = popImg(textureImgs)
-            else if (style === 'banner') url = popImg(backgroundImgs)
+          let matchedUrl = slotToUrl.get(slotKey1) || slotToUrl.get(slotKey2) || slotToUrl.get(slotKey3)
 
-            // 매칭 실패 시 남은 이미지 사용
-            if (!url) url = popAnyRemaining()
-
-            if (url) {
-              el.src = url
-            } else if (!needAiStyles.includes(style)) {
-              needAiStyles.push(style)
+          // slotKey 매칭 실패 시 기본 처리
+          if (!matchedUrl || usedUrls.has(matchedUrl)) {
+            if (imgEl.src === 'product' && mainImageUrl) {
+              matchedUrl = mainImageUrl
+            } else {
+              // 아직 안 쓴 이미지 중 아무거나
+              for (const url of uploadedUrls) {
+                if (!usedUrls.has(url)) { matchedUrl = url; break }
+              }
             }
           }
+
+          if (matchedUrl) {
+            imgEl.src = matchedUrl
+            usedUrls.add(matchedUrl)
+          } else if (imgEl.src.startsWith('generate:')) {
+            const style = imgEl.src.replace('generate:', '')
+            if (!needAiStyles.includes(style)) needAiStyles.push(style)
+          }
+
+          imgIndex++
         }
       }
 
