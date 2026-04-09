@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
-import { Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Upload, Wand2, Loader2 } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
-import type { Section } from '@/types'
+import type { Section, TextElement } from '@/types'
 import { cn } from '@/lib/utils'
 
 const COLOR_PRESETS = [
@@ -20,8 +20,61 @@ interface StylePanelProps {
 export function StylePanel({ section }: StylePanelProps) {
   const updateSectionBackground = useEditorStore((s) => s.updateSectionBackground)
   const updateSectionHeight = useEditorStore((s) => s.updateSectionHeight)
+  const updateElement = useEditorStore((s) => s.updateElement)
+  const project = useEditorStore((s) => s.project)
   const bgFileRef = useRef<HTMLInputElement>(null)
+  const [isAutoStyling, setIsAutoStyling] = useState(false)
   const { background } = section
+
+  // 텍스트 자동 매칭 — 배경에 맞게 텍스트 색상/굵기 자동 조정
+  const handleAutoStyle = async () => {
+    if (isAutoStyling || !project) return
+    setIsAutoStyling(true)
+    try {
+      const textEls = section.elements.filter((el) => el.type === 'text') as TextElement[]
+      if (textEls.length === 0) { alert('이 섹션에 텍스트가 없습니다.'); return }
+
+      // 텍스트 역할 자동 판단 (크기 기반)
+      const texts = textEls.map((el) => ({
+        id: el.id,
+        content: el.content,
+        fontSize: el.fontSize,
+        role: el.fontSize >= 28 ? 'title' as const
+          : el.fontSize >= 18 ? 'subtitle' as const
+          : el.letterSpacing > 0 ? 'label' as const
+          : el.fontSize <= 12 ? 'accent' as const
+          : 'body' as const,
+      }))
+
+      const res = await fetch('/api/auto-style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          backgroundType: background.type,
+          backgroundValue: background.value,
+          texts,
+          mood: project.product.mood,
+        }),
+      })
+
+      if (!res.ok) throw new Error('실패')
+      const data = await res.json()
+
+      if (data.styles?.length) {
+        for (const style of data.styles) {
+          updateElement(section.id, style.id, {
+            color: style.color,
+            fontWeight: style.fontWeight,
+          })
+        }
+      }
+    } catch (err) {
+      console.error('[AutoStyle]', err)
+      alert('자동 매칭 실패. 다시 시도해주세요.')
+    } finally {
+      setIsAutoStyling(false)
+    }
+  }
 
   const handleBgFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -142,6 +195,22 @@ export function StylePanel({ section }: StylePanelProps) {
           max={2000}
           step={10}
         />
+      </Field>
+
+      {/* 텍스트 자동 매칭 */}
+      <Field label="텍스트 자동 매칭">
+        <button
+          onClick={handleAutoStyle}
+          disabled={isAutoStyling}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all"
+        >
+          {isAutoStyling ? (
+            <><Loader2 size={14} className="animate-spin" /> AI 분석 중...</>
+          ) : (
+            <><Wand2 size={14} /> 배경에 맞게 텍스트 색상 자동 조정</>
+          )}
+        </button>
+        <p className="text-[10px] text-gray-400 mt-1">배경색/이미지를 분석하여 텍스트 색상과 굵기를 자동 조정합니다</p>
       </Field>
     </div>
   )
