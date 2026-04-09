@@ -286,23 +286,15 @@ export default function NewProjectPage() {
 
       const needAiStyles: string[] = []
 
-      // 섹션별 배경 이미지 우선순위 + 오버레이 설정
-      // 가능한 많은 섹션에 이미지를 배경으로 깔아서 자연스럽게 스며들게
+      // 배경 이미지는 texture/banner/cta만 — 나머지 섹션은 텍스트 가독성을 위해 배경 이미지 금지
       const bgPriority: { type: string; sources: string[][]; overlay: string }[] = [
-        { type: 'hero', sources: [modelImgs, lifestyleImgs], overlay: 'rgba(255,255,255,0.3)' },
         { type: 'texture', sources: [textureImgs, detailImgs], overlay: 'rgba(0,0,0,0.08)' },
         { type: 'banner', sources: [backgroundImgs, modelImgs, lifestyleImgs], overlay: 'rgba(0,0,0,0.35)' },
         { type: 'cta', sources: [backgroundImgs, textureImgs], overlay: 'rgba(0,0,0,0.45)' },
-        { type: 'philosophy', sources: [lifestyleImgs, backgroundImgs], overlay: 'rgba(255,255,255,0.6)' },
-        { type: 'benefits', sources: [lifestyleImgs, modelImgs], overlay: 'rgba(255,255,255,0.75)' },
-        { type: 'ingredients', sources: [ingredientImgs, textureImgs], overlay: 'rgba(255,255,255,0.7)' },
-        { type: 'proof', sources: [detailImgs, textureImgs], overlay: 'rgba(255,255,255,0.8)' },
-        { type: 'howto', sources: [modelImgs, lifestyleImgs], overlay: 'rgba(255,255,255,0.75)' },
-        { type: 'reviews', sources: [lifestyleImgs, backgroundImgs], overlay: 'rgba(255,255,255,0.85)' },
       ]
 
       for (const section of sections) {
-        // 섹션 배경 이미지 배치 — 이미지가 섹션에 자연스럽게 스며들도록
+        // 배경 이미지: texture/banner/cta만 허용
         const bgConfig = bgPriority.find(b => b.type === section.type)
         if (bgConfig) {
           let bgUrl: string | null = null
@@ -310,10 +302,20 @@ export default function NewProjectPage() {
             bgUrl = popImg(source)
             if (bgUrl) break
           }
-          // 남는 이미지가 있으면 아무거나 배경으로
-          if (!bgUrl && section.type !== 'specs') bgUrl = popAnyRemaining()
           if (bgUrl) {
             section.background = { type: 'image', value: bgUrl, overlay: bgConfig.overlay }
+          }
+        }
+
+        // hero: 첫 번째 제품 이미지를 이미지 엘리먼트로 배치 (배경 아님)
+        if (section.type === 'hero') {
+          const heroImg = popImg(productImgs) || popImg(modelImgs) || popImg(lifestyleImgs)
+          if (heroImg) {
+            const hasImgEl = section.elements.some(el => el.type === 'image')
+            if (hasImgEl) {
+              const imgEl = section.elements.find(el => el.type === 'image' && ((el as import('@/types').ImageElement).src === 'product' || (el as import('@/types').ImageElement).src.startsWith('generate:')))
+              if (imgEl) (imgEl as import('@/types').ImageElement).src = heroImg
+            }
           }
         }
 
@@ -336,7 +338,7 @@ export default function NewProjectPage() {
             else if (style === 'texture') url = popImg(textureImgs)
             else if (style === 'banner') url = popImg(backgroundImgs)
 
-            // 매칭 실패 시 남은 이미지 아무거나 사용
+            // 매칭 실패 시 남은 이미지 사용
             if (!url) url = popAnyRemaining()
 
             if (url) {
@@ -420,14 +422,11 @@ export default function NewProjectPage() {
   }
 
   function applyImages(sections: Section[], aiImages: Record<string, string>, imageUrl: string) {
-    // 더 많은 섹션에 AI 이미지를 배경으로 — 이미지가 자연스럽게 스며들도록
+    // 배경 이미지는 texture/banner/cta만 — 텍스트 가독성을 위해 다른 섹션은 배경 이미지 금지
     const sectionBgMap: Record<string, { style: string; overlay: string }[]> = {
-      hero: [{ style: 'lifestyle', overlay: 'rgba(255,255,255,0.3)' }],
       texture: [{ style: 'texture', overlay: 'rgba(0,0,0,0.08)' }],
       banner: [{ style: 'banner', overlay: 'rgba(0,0,0,0.35)' }],
       cta: [{ style: 'hero_bg', overlay: 'rgba(0,0,0,0.45)' }],
-      philosophy: [{ style: 'lifestyle', overlay: 'rgba(255,255,255,0.65)' }],
-      ingredients: [{ style: 'ingredient', overlay: 'rgba(255,255,255,0.7)' }],
     }
     const usedStyles = new Set<string>()
     for (const section of sections) {

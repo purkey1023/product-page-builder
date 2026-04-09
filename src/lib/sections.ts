@@ -75,17 +75,17 @@ export const ALL_SECTION_TYPES: SectionType[] = [
 // 섹션별 기본 높이 (ANUA 수준)
 // ──────────────────────────────────────
 const DEFAULT_HEIGHTS: Record<SectionType, number> = {
-  hero: 1400,
-  philosophy: 800,
-  benefits: 1600,
-  ingredients: 1400,
-  texture: 1100,
-  proof: 900,
-  howto: 1200,
-  banner: 700,
-  reviews: 1000,
-  specs: 900,
-  cta: 600,
+  hero: 1100,
+  philosophy: 600,
+  benefits: 1300,
+  ingredients: 1100,
+  texture: 900,
+  proof: 700,
+  howto: 1000,
+  banner: 600,
+  reviews: 900,
+  specs: 750,
+  cta: 500,
 }
 
 // ──────────────────────────────────────
@@ -111,32 +111,26 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
 
   switch (type) {
 
-    // ━━━━━━━━━━ HERO (1400px) ━━━━━━━━━━
+    // ━━━━━━━━━━ HERO (1100px) ━━━━━━━━━━
     case 'hero':
-      // 상단 여백 + 브랜드 라벨
-      els.push(makeText('BRAND NAME', 0, 60, W, 24, { fontSize: 12, fontWeight: 400, color: p.textMuted, textAlign: 'center', letterSpacing: 6, fontFamily: 'Playfair Display' }))
-      // 제품명 대제목
-      els.push(makeText('제품명을 입력하세요', 0, 100, W, 80, { fontSize: 44, fontWeight: 300, color: p.text, textAlign: 'center', lineHeight: 1.3 }))
-      // 서브카피
-      els.push(makeText('핵심 소구 포인트를 한 줄로 표현하세요', 90, 200, 600, 30, { fontSize: 16, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
-      // 구분선
-      els.push(makeShape('line', 340, 250, 100, 2, { backgroundColor: p.accent }))
-      // 평점 배지
-      els.push(makeShape('rect', 280, 280, 220, 36, { backgroundColor: p.accentBg, borderRadius: 18 }))
-      els.push(makeText('★★★★★  4.9  (2,847 리뷰)', 280, 286, 220, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      // 제품 이미지 (큰 사이즈)
-      els.push(makeImage('product', 140, 370, 500, 650))
-      // 하단 키워드 3개
-      els.push(makeShape('rect', 80, 1080, 180, 50, { backgroundColor: p.accentBg, borderRadius: 25 }))
-      els.push(makeText('#키워드1', 80, 1092, 180, 28, { fontSize: 13, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      els.push(makeShape('rect', 300, 1080, 180, 50, { backgroundColor: p.accentBg, borderRadius: 25 }))
-      els.push(makeText('#키워드2', 300, 1092, 180, 28, { fontSize: 13, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      els.push(makeShape('rect', 520, 1080, 180, 50, { backgroundColor: p.accentBg, borderRadius: 25 }))
-      els.push(makeText('#키워드3', 520, 1092, 180, 28, { fontSize: 13, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      // 하단 감성 카피
-      els.push(makeText('피부 본연의 힘을 깨우다', 0, 1200, W, 50, { fontSize: 22, fontWeight: 300, color: p.textMuted, textAlign: 'center', letterSpacing: 2 }))
-      // 아래 스크롤 유도
-      els.push(makeText('↓', 0, 1320, W, 40, { fontSize: 24, fontWeight: 300, color: p.textLight, textAlign: 'center' }))
+      // 텍스트 zone: y:40~280
+      els.push(makeText('BRAND NAME', 40, 50, 700, 20, { fontSize: 12, fontWeight: 400, color: p.textMuted, textAlign: 'center', letterSpacing: 6, fontFamily: 'Playfair Display' }))
+      els.push(makeText('제품명을 입력하세요', 40, 85, 700, 70, { fontSize: 40, fontWeight: 300, color: p.text, textAlign: 'center', lineHeight: 1.3 }))
+      els.push(makeText('핵심 소구 포인트를 한 줄로', 40, 170, 700, 28, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
+      els.push(makeShape('line', 340, 215, 100, 2, { backgroundColor: p.accent }))
+      els.push(makeShape('rect', 280, 235, 220, 32, { backgroundColor: p.accentBg, borderRadius: 16 }))
+      els.push(makeText('★★★★★  4.9  (2,847 리뷰)', 280, 241, 220, 20, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      // 이미지 zone: y:300~880 (텍스트와 완전 분리)
+      els.push(makeImage('product', 165, 300, 450, 580))
+      // 키워드 zone: y:910~960
+      els.push(makeShape('rect', 80, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
+      els.push(makeText('#키워드1', 80, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeShape('rect', 300, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
+      els.push(makeText('#키워드2', 300, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeShape('rect', 520, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
+      els.push(makeText('#키워드3', 520, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      // 감성 카피: y:980
+      els.push(makeText('피부 본연의 힘을 깨우다', 40, 980, 700, 40, { fontSize: 20, fontWeight: 300, color: p.textMuted, textAlign: 'center', letterSpacing: 2 }))
       break
 
     // ━━━━━━━━━━ PHILOSOPHY (800px) ━━━━━━━━━━
@@ -158,29 +152,26 @@ function getDefaultElements(type: SectionType, mood: MoodType): SectionElement[]
       els.push(makeText('KEY BENEFITS', 0, 60, W, 24, { fontSize: 12, fontWeight: 400, color: p.accent, textAlign: 'center', letterSpacing: 4 }))
       els.push(makeText('이 제품이 특별한 이유', 0, 95, W, 50, { fontSize: 34, fontWeight: 600, color: p.text, textAlign: 'center' }))
       els.push(makeShape('line', 340, 165, 100, 2, { backgroundColor: p.accent }))
-      // 장점 1 - 좌 이미지 + 우 텍스트
-      els.push(makeShape('rect', 0, 220, W, 380, { backgroundColor: p.bgAlt, borderRadius: 0 }))
-      els.push(makeImage('generate:lifestyle', 0, 220, 380, 380))
-      els.push(makeShape('circle', 420, 260, 44, 44, { backgroundColor: p.accent, borderRadius: 9999 }))
-      els.push(makeText('01', 420, 270, 44, 24, { fontSize: 16, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('첫 번째 핵심 장점', 480, 264, 260, 30, { fontSize: 20, fontWeight: 600, color: p.text, textAlign: 'left' }))
-      els.push(makeText('피부에 즉각적인 변화를 느낄 수 있습니다.\n가볍게 바르기만 해도 깊은 보습이\n오래도록 지속됩니다.', 420, 320, 320, 100, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
-      // 장점 2 - 우 이미지 + 좌 텍스트
-      els.push(makeShape('rect', 0, 650, W, 380, { backgroundColor: p.bg, borderRadius: 0 }))
-      els.push(makeImage('generate:ingredient', 400, 650, 380, 380))
-      els.push(makeShape('circle', 60, 690, 44, 44, { backgroundColor: p.accent, borderRadius: 9999 }))
-      els.push(makeText('02', 60, 700, 44, 24, { fontSize: 16, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('두 번째 핵심 장점', 120, 694, 260, 30, { fontSize: 20, fontWeight: 600, color: p.text, textAlign: 'left' }))
-      els.push(makeText('자연 유래 성분이 피부 깊숙이 스며들어\n건강한 피부 장벽을 형성합니다.\n민감한 피부도 안심하고 사용할 수 있습니다.', 60, 750, 320, 100, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
+      // 장점 1 - 좌 이미지(x:40~380) + 우 텍스트(x:420~740) — 완전 분리
+      els.push(makeImage('generate:lifestyle', 40, 200, 340, 340, { borderRadius: 16, objectFit: 'cover' }))
+      els.push(makeShape('circle', 420, 220, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
+      els.push(makeText('01', 420, 228, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
+      els.push(makeText('첫 번째 핵심 장점', 470, 224, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText('피부에 즉각적인 변화를 느낄 수 있습니다.\n가볍게 바르기만 해도 깊은 보습이\n오래도록 지속됩니다.', 420, 280, 320, 120, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
+      // 장점 2 - 좌 텍스트(x:40~380) + 우 이미지(x:400~740) — 좌우 반전
+      els.push(makeShape('circle', 40, 600, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
+      els.push(makeText('02', 40, 608, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
+      els.push(makeText('두 번째 핵심 장점', 90, 604, 270, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText('자연 유래 성분이 피부 깊숙이 스며들어\n건강한 피부 장벽을 형성합니다.\n민감한 피부도 안심합니다.', 40, 660, 340, 120, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
+      els.push(makeImage('generate:ingredient', 400, 580, 340, 340, { borderRadius: 16, objectFit: 'cover' }))
       // 장점 3 - 풀폭 카드
-      els.push(makeShape('rect', 60, 1080, 660, 200, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeShape('circle', 100, 1120, 44, 44, { backgroundColor: p.accent, borderRadius: 9999 }))
-      els.push(makeText('03', 100, 1130, 44, 24, { fontSize: 16, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
-      els.push(makeText('세 번째 핵심 장점', 160, 1124, 400, 30, { fontSize: 20, fontWeight: 600, color: p.text, textAlign: 'left' }))
-      els.push(makeText('매일 사용할수록 피부 톤이 맑아지고\n탄력이 개선되는 것을 느낄 수 있습니다.', 160, 1170, 500, 80, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
-      // 하단 강조 문구
-      els.push(makeText('단 하나의 제품으로, 세 가지 효과를 한번에', 0, 1380, W, 40, { fontSize: 18, fontWeight: 500, color: p.text, textAlign: 'center' }))
-      els.push(makeText('매일의 루틴이 특별해집니다', 0, 1430, W, 30, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
+      els.push(makeShape('rect', 40, 980, 700, 160, { backgroundColor: p.accentBg, borderRadius: 16 }))
+      els.push(makeShape('circle', 70, 1010, 40, 40, { backgroundColor: p.accent, borderRadius: 9999 }))
+      els.push(makeText('03', 70, 1018, 40, 24, { fontSize: 15, fontWeight: 700, color: '#FFFFFF', textAlign: 'center' }))
+      els.push(makeText('세 번째 핵심 장점', 120, 1014, 400, 28, { fontSize: 19, fontWeight: 600, color: p.text, textAlign: 'left' }))
+      els.push(makeText('매일 사용할수록 피부 톤이 맑아지고\n탄력이 개선됩니다.', 120, 1060, 580, 60, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
+      // 하단
+      els.push(makeText('단 하나의 제품으로, 세 가지 효과를 한번에', 40, 1200, 700, 36, { fontSize: 17, fontWeight: 500, color: p.text, textAlign: 'center' }))
       break
 
     // ━━━━━━━━━━ INGREDIENTS (1400px) ━━━━━━━━━━
