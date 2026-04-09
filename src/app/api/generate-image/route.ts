@@ -138,13 +138,65 @@ ${TONE_GUIDE}
 CRITICAL: NO text, logos, or product packaging. Pure abstract liquid art on BRIGHT background only.`,
 
     hero_bg: `Soft bright gradient studio background for Korean premium beauty product photography. Product context: ${analysis}
-
-Create a smooth, BRIGHT, warm gradient backdrop. Colors: warm cream (#FFF8F0) to soft beige (#F0E6DA) or light rose-beige. Subtle soft circular bokeh light effects. The overall tone must be BRIGHT and WARM — like a Korean beauty brand studio backdrop.
-
+Create a smooth, BRIGHT, warm gradient backdrop. Colors: warm cream (#FFF8F0) to soft beige (#F0E6DA) or light rose-beige. Subtle soft circular bokeh light effects. The overall tone must be BRIGHT and WARM.
 Style: ${moodDesc}
 ${TONE_GUIDE}
-
 CRITICAL: NO objects, NO text, NO products. Bright warm gradient background only.`,
+
+    // ━━━ 섹션별 배경 이미지 스타일 (텍스트 오버레이용) ━━━
+    'section-hero': `Premium beauty brand hero section background. Product: ${analysis}
+A beautiful bright studio scene with the product bottle/tube centered, surrounded by soft light and subtle product-related elements (droplets, botanical hints). Leave CLEAR EMPTY SPACE at top 30% for text overlay and bottom 15% for badges. The product should be the focal point in the center-bottom area.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text, NO logos. Product visible but leave space for text overlay at top.`,
+
+    'section-philosophy': `Soft dreamy botanical background for a brand philosophy section. Product context: ${analysis}
+Gentle out-of-focus botanical elements (leaves, petals, water) in warm neutral tones. Very soft and ethereal. The CENTER and LEFT side should be relatively EMPTY/LIGHT for text overlay. Elements concentrated on right edge and corners.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Soft, blurry, dreamy. Most of the frame should be light/empty for text.`,
+
+    'section-benefits': `Clean bright beauty section background with subtle visual interest. Product: ${analysis}
+Soft gradient from warm cream to white, with very subtle abstract elements (light rays, soft circles, gentle curves) at the edges. The CENTER area must be CLEAR for text and smaller images to be placed on top. Professional Korean beauty brand style.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Mostly clean/empty center. Decorative elements only at edges.`,
+
+    'section-ingredients': `Natural ingredients beauty background. Product: ${analysis}
+Arrange real botanical ingredients (fresh leaves, herbs, flower petals, water drops) around the EDGES of the frame. The CENTER should be EMPTY/LIGHT for text overlay. Ingredients should be blurred or at the periphery. Soft natural lighting, warm tones.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Center must be clear. Ingredients at edges only.`,
+
+    'section-proof': `Clean clinical beauty background for data/statistics section. Product: ${analysis}
+Minimal clean background with subtle geometric patterns or soft gradient. Very light and professional. Think lab/clinical aesthetic but warm and inviting. Most of the frame should be EMPTY for numbers and text overlay.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text, NO numbers. Clean, minimal, mostly empty for data overlay.`,
+
+    'section-howto': `Soft warm beauty tutorial background. Product: ${analysis}
+Gentle warm-toned background with subtle beauty elements (soft light, cream tones). Very clean and instructional feeling. MOST of the frame should be LIGHT/EMPTY for step-by-step text overlay. Subtle decorative elements at edges.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Mostly empty, warm, inviting background for tutorial overlay.`,
+
+    'section-reviews': `Warm cozy testimonial section background. Product: ${analysis}
+Soft warm beige/cream gradient background with very subtle texture (paper-like or fabric-like). Feels warm, trustworthy, personal. MOST of the frame should be UNIFORM for review card overlays. Minimal visual elements.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Uniform warm background, minimal decoration.`,
+
+    'section-specs': `Clean product information background. Product: ${analysis}
+Very clean, bright white or light gray background with subtle product-related elements at one edge. Professional, informational feel. LEFT side can have subtle product hints, RIGHT side must be CLEAR for specification text.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Clean, informational, mostly empty.`,
+
+    'section-cta': `Premium dark beauty CTA background. Product: ${analysis}
+Rich, deep dark background (dark chocolate, charcoal, or deep navy) with subtle golden/warm light accents. Luxurious and inviting. CENTER should have space for product image and text. Elegant mood lighting.
+Style: ${moodDesc}
+${TONE_GUIDE}
+CRITICAL: NO text. Dark, luxurious, with warm accent lighting.`,
   }
 
   // 컨텍스트가 있으면 Gemini로 맞춤 프롬프트 생성

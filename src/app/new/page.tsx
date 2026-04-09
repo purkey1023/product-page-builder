@@ -129,20 +129,33 @@ export default function NewProjectPage() {
         productImageBase64 = await fileToBase64(imageFile)
       }
 
-      setLoadingStatus('AI가 제품을 분석하고 11개 섹션을 디자인하고 있어요... (1~2분 소요)')
+      // ── AI 콘텐츠 + 엘리먼트 이미지 + 섹션 배경 이미지 병렬 생성 ──
+      setLoadingStatus('AI가 상세페이지를 디자인하고 있어요... (2~3분 소요)')
 
-      const [contentRes, imageRes] = await Promise.allSettled([
+      const [contentRes, imageRes, bgRes] = await Promise.allSettled([
+        // 1. AI 카피/레이아웃 생성
         fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productName, category, mood, keyPoints: [kp1, kp2, kp3] }),
         }),
+        // 2. 엘리먼트 이미지 (제품 사진 기반)
         fetch('/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productName, category, mood,
-            styles: ['texture', 'ingredient', 'lifestyle', 'banner', 'hero_bg'],
+            styles: ['texture', 'ingredient', 'lifestyle'],
+            productImageBase64,
+          }),
+        }),
+        // 3. 섹션 배경 이미지 (6개 핵심 섹션)
+        fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productName, category, mood,
+            styles: ['section-hero', 'section-philosophy', 'section-benefits', 'section-ingredients', 'section-proof', 'section-cta'],
             productImageBase64,
           }),
         }),
@@ -151,7 +164,28 @@ export default function NewProjectPage() {
       setLoadingStatus('섹션을 구성하고 있어요...')
       let sections = await buildSections(contentRes, mood)
       const aiImages = await extractAiImages(imageRes)
+      const bgImages = await extractAiImages(bgRes)
       applyImages(sections, aiImages, imageUrl)
+
+      // 섹션 배경 이미지 적용
+      const sectionBgOverlays: Record<string, string> = {
+        hero: 'rgba(0,0,0,0.03)',
+        philosophy: 'rgba(0,0,0,0.05)',
+        benefits: 'rgba(255,255,255,0.15)',
+        ingredients: 'rgba(255,255,255,0.1)',
+        proof: 'rgba(255,255,255,0.2)',
+        cta: 'rgba(0,0,0,0.3)',
+      }
+      for (const section of sections) {
+        const bgKey = `section-${section.type}`
+        if (bgImages[bgKey]) {
+          section.background = {
+            type: 'image',
+            value: bgImages[bgKey],
+            overlay: sectionBgOverlays[section.type] || 'rgba(255,255,255,0.1)',
+          }
+        }
+      }
 
       setLoadingStatus('프로젝트를 저장하는 중...')
       const project = await createProject({
@@ -435,10 +469,10 @@ export default function NewProjectPage() {
           <p className="font-bold text-gray-800 text-lg">{loadingStatus}</p>
           <p className="text-sm text-gray-400 mt-2">
             {mode === 'simple'
-              ? 'AI가 11개 섹션 + 이미지를 생성합니다'
+              ? 'AI가 섹션별 배경 이미지 + 카피를 생성합니다'
               : 'AI가 이미지를 분석하고 섹션에 자동 배치합니다'}
           </p>
-          <p className="text-xs text-gray-300 mt-1">약 1~2분 소요 (퀄리티 최우선)</p>
+          <p className="text-xs text-gray-300 mt-1">약 2~3분 소요 (포토샵 수준 퀄리티)</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-center">
           {(mode === 'simple'

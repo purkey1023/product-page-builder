@@ -123,39 +123,38 @@ function getDefaultElements(type: SectionType, mood: MoodType, product?: Product
   switch (type) {
 
     // ━━━━━━━━━━ HERO (1100px) ━━━━━━━━━━
+    // 배경 이미지 위에 반투명 박스 + 텍스트 오버레이 방식
     case 'hero':
-      // 텍스트 zone: y:40~280
+      // 상단 텍스트 영역 반투명 박스 (배경 이미지 위 가독성 확보)
+      els.push(makeShape('rect', 0, 0, W, 300, { backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 0 }))
       els.push(makeText('BRAND NAME', 40, 50, 700, 20, { fontSize: 12, fontWeight: 400, color: p.textMuted, textAlign: 'center', letterSpacing: 6, fontFamily: 'Playfair Display' }))
       els.push(makeText(pName, 40, 85, 700, 70, { fontSize: 40, fontWeight: 300, color: p.text, textAlign: 'center', lineHeight: 1.3 }))
       els.push(makeText(kp1, 40, 170, 700, 28, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'center' }))
       els.push(makeShape('line', 340, 215, 100, 2, { backgroundColor: p.accent }))
-      els.push(makeShape('rect', 280, 235, 220, 32, { backgroundColor: p.accentBg, borderRadius: 16 }))
-      els.push(makeText('★★★★★  4.9  (2,847 리뷰)', 280, 241, 220, 20, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      // 이미지 zone: y:300~880 (텍스트와 완전 분리)
-      els.push(makeImage('product', 165, 300, 450, 580))
-      // 키워드 zone: y:910~960
-      els.push(makeShape('rect', 80, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText(`#${kp1}`, 80, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      els.push(makeShape('rect', 300, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText(`#${kp2}`, 300, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      els.push(makeShape('rect', 520, 910, 180, 40, { backgroundColor: p.accentBg, borderRadius: 20 }))
-      els.push(makeText(`#${kp3}`, 520, 918, 180, 24, { fontSize: 12, fontWeight: 500, color: p.accent, textAlign: 'center' }))
-      // 감성 카피: y:980
-      els.push(makeText('피부 본연의 힘을 깨우다', 40, 980, 700, 40, { fontSize: 20, fontWeight: 300, color: p.textMuted, textAlign: 'center', letterSpacing: 2 }))
+      els.push(makeShape('rect', 280, 240, 220, 32, { backgroundColor: p.accentBg, borderRadius: 16 }))
+      els.push(makeText('★★★★★  4.9  (2,847 리뷰)', 280, 246, 220, 20, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      // 중앙: 배경 이미지가 보이는 영역 (y:300~880)
+      // 제품 이미지 (배경 위에 올라감)
+      els.push(makeImage('product', 165, 320, 450, 560))
+      // 하단 반투명 박스 + 키워드/감성카피
+      els.push(makeShape('rect', 0, 900, W, 200, { backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 0 }))
+      els.push(makeShape('rect', 80, 920, 180, 36, { backgroundColor: p.accentBg, borderRadius: 18 }))
+      els.push(makeText(`#${kp1}`, 80, 926, 180, 24, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeShape('rect', 300, 920, 180, 36, { backgroundColor: p.accentBg, borderRadius: 18 }))
+      els.push(makeText(`#${kp2}`, 300, 926, 180, 24, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeShape('rect', 520, 920, 180, 36, { backgroundColor: p.accentBg, borderRadius: 18 }))
+      els.push(makeText(`#${kp3}`, 520, 926, 180, 24, { fontSize: 11, fontWeight: 500, color: p.accent, textAlign: 'center' }))
+      els.push(makeText('피부 본연의 힘을 깨우다', 40, 975, 700, 36, { fontSize: 18, fontWeight: 300, color: p.textMuted, textAlign: 'center', letterSpacing: 2 }))
       break
 
-    // ━━━━━━━━━━ PHILOSOPHY (800px) ━━━━━━━━━━
+    // ━━━━━━━━━━ PHILOSOPHY (600px) ━━━━━━━━━━
     case 'philosophy':
-      // 좌측 accent 세로 바
-      els.push(makeShape('rect', 100, 200, 4, 120, { backgroundColor: p.accent }))
-      // 인용구
-      els.push(makeText('"우리는 피부 본연의 아름다움을\n되찾아주는 것을 믿습니다"', 130, 200, 500, 120, { fontSize: 24, fontWeight: 300, color: p.text, textAlign: 'left', lineHeight: 1.8 }))
-      // 작은 카피
-      els.push(makeText('— Brand Philosophy', 130, 360, 300, 24, { fontSize: 13, fontWeight: 400, color: p.textMuted, textAlign: 'left', letterSpacing: 2, fontFamily: 'Playfair Display' }))
-      // 브랜드 설명
-      els.push(makeText('자연에서 영감을 받아, 과학으로 완성합니다.\n순하지만 확실한 효과를 약속합니다.', 130, 440, 520, 80, { fontSize: 15, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
-      // 장식 원형
-      els.push(makeShape('circle', 620, 180, 80, 80, { backgroundColor: p.accentBg, borderRadius: 9999 }))
+      // 반투명 텍스트 배경 (배경 이미지 위 가독성)
+      els.push(makeShape('rect', 60, 140, 660, 400, { backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 20 }))
+      els.push(makeShape('rect', 100, 180, 4, 120, { backgroundColor: p.accent }))
+      els.push(makeText('"우리는 피부 본연의 아름다움을\n되찾아주는 것을 믿습니다"', 130, 180, 560, 120, { fontSize: 22, fontWeight: 300, color: p.text, textAlign: 'left', lineHeight: 1.8 }))
+      els.push(makeText('— Brand Philosophy', 130, 330, 300, 24, { fontSize: 13, fontWeight: 400, color: p.textMuted, textAlign: 'left', letterSpacing: 2, fontFamily: 'Playfair Display' }))
+      els.push(makeText('자연에서 영감을 받아, 과학으로 완성합니다.\n순하지만 확실한 효과를 약속합니다.', 100, 390, 580, 80, { fontSize: 14, fontWeight: 400, color: p.textMuted, textAlign: 'left', lineHeight: 1.8 }))
       break
 
     // ━━━━━━━━━━ BENEFITS (1600px) ━━━━━━━━━━
