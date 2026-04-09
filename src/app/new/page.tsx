@@ -132,7 +132,7 @@ export default function NewProjectPage() {
       // ── AI 콘텐츠 + 엘리먼트 이미지 + 섹션 배경 이미지 병렬 생성 ──
       setLoadingStatus('AI가 상세페이지를 디자인하고 있어요... (2~3분 소요)')
 
-      const [contentRes, imageRes, bgRes] = await Promise.allSettled([
+      const [contentRes, imageRes] = await Promise.allSettled([
         // 1. AI 카피/레이아웃 생성
         fetch('/api/generate', {
           method: 'POST',
@@ -149,43 +149,12 @@ export default function NewProjectPage() {
             productImageBase64,
           }),
         }),
-        // 3. 섹션 배경 이미지 (6개 핵심 섹션)
-        fetch('/api/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productName, category, mood,
-            styles: ['section-hero', 'section-philosophy', 'section-benefits', 'section-ingredients', 'section-proof', 'section-cta'],
-            productImageBase64,
-          }),
-        }),
       ])
 
       setLoadingStatus('섹션을 구성하고 있어요...')
       let sections = await buildSections(contentRes, mood)
       const aiImages = await extractAiImages(imageRes)
-      const bgImages = await extractAiImages(bgRes)
       applyImages(sections, aiImages, imageUrl)
-
-      // 섹션 배경 이미지 적용
-      const sectionBgOverlays: Record<string, string> = {
-        hero: 'rgba(0,0,0,0.03)',
-        philosophy: 'rgba(0,0,0,0.05)',
-        benefits: 'rgba(255,255,255,0.15)',
-        ingredients: 'rgba(255,255,255,0.1)',
-        proof: 'rgba(255,255,255,0.2)',
-        cta: 'rgba(0,0,0,0.3)',
-      }
-      for (const section of sections) {
-        const bgKey = `section-${section.type}`
-        if (bgImages[bgKey]) {
-          section.background = {
-            type: 'image',
-            value: bgImages[bgKey],
-            overlay: sectionBgOverlays[section.type] || 'rgba(255,255,255,0.1)',
-          }
-        }
-      }
 
       setLoadingStatus('프로젝트를 저장하는 중...')
       const project = await createProject({

@@ -27,86 +27,96 @@ export function buildGeneratePrompt(
 ): string {
   const moodGuide = MOOD_GUIDE[mood]
 
-  return `당신은 ANUA, 라네즈, 이니스프리 수준의 한국 프리미엄 e-commerce 상세페이지 전문 디자이너+카피라이터입니다.
+  return `당신은 ANUA, PEPTOIR, 라운드랩 수준의 한국 프리미엄 상세페이지 전문 디자이너+카피라이터입니다.
 780px 너비의 이미지 시퀀스 상세페이지를 위한 구조화된 JSON을 생성합니다.
-각 섹션은 하나의 이미지로 렌더링되며, 스마트스토어/쿠팡에 업로드됩니다.
 
-[절대 규칙]
-• 반드시 순수 JSON만 출력하세요. 마크다운 코드블록(\`\`\`), 설명, 주석 절대 금지.
-• 제품명 "${productName}"을 절대 변경/창작하지 마세요.
-• 모든 좌표는 px 단위 정수. 캔버스 너비 780px. x + width ≤ 780 필수.
-• 한국어 카피 위주 + 영문 UPPERCASE 소제목 혼용.
-• 모든 카피는 실제 상위 1% 매출 상세페이지 수준으로 작성하세요.
+━━━ 절대 규칙 ━━━
+• 순수 JSON만 출력. 마크다운 코드블록(\`\`\`), 설명, 주석 절대 금지.
+• 제품명 "${productName}"을 절대 변경하지 마세요.
+• 모든 좌표: px 정수. x + width ≤ 780, x ≥ 0.
+• element y + height ≤ section height 필수.
 
-[레이아웃 철칙 — 반드시 준수]
-• 텍스트와 이미지는 절대 겹치면 안 됩니다. 텍스트 영역과 이미지 영역은 y축에서 완전히 분리하세요.
-• 같은 수평 행(같은 y 범위)에 있는 elements는 x축에서 겹치면 안 됩니다.
-  예: 좌측 element x:0 width:380 → 우측 element는 x:400 이상이어야 함.
-• 모든 element는 반드시 x + width ≤ 780, x ≥ 0 을 만족해야 합니다.
-• 적은 수의 큰 element가 많은 수의 작은 element보다 좋습니다. 섹션당 5~12개 elements가 적정합니다.
-• elements 사이에 최소 20px 수직 여백(gap)을 확보하세요.
-• 풀폭 텍스트는 좌우 padding 40px 적용: x:40, width:700.
-• 가운데 정렬 이미지: x = (780 - imageWidth) / 2.
-• 빈 공간 없이 촘촘하게 배치하되, 겹침은 절대 금지.
-• shape(배경 rect 등)와 그 위의 텍스트는 예외적으로 겹칠 수 있음 (배경+전경 관계).
+━━━ 디자인 철학 (가장 중요) ━━━
+• LESS IS MORE: 섹션당 5~10개 elements. 작은 element 여러 개보다 큰 element 적게.
+• NO 원형 번호 배지: circle shape로 "01/02/03"을 만들지 마세요. 대신 plain text로 번호 표시.
+• NO 반투명 오버레이 박스: 배경 이미지 위에 rgba 반투명 rect를 올리지 마세요.
+• NO 작은 장식 원형(circle shape): opacity:0.1짜리 원 장식 금지.
+• 이미지는 크게: benefits/ingredients 이미지는 섹션 절반 높이를 채우도록 (x:0 또는 x:410, w:370, h:420).
+• 텍스트 계층: 영문 소제목(11px) → 대제목(36-44px) → 본문(14px). 이 3단계만 사용.
+• 구분선은 섹션당 1개만: shape line, x: (780-160)/2, width:160, height:1.
 
-[LAYOUT GRID — 섹션별 안전 영역 가이드]
-각 섹션에서 텍스트와 이미지를 배치할 때 아래 y-zone을 참고하세요.
-zone 안에서만 해당 타입의 element를 배치합니다.
+━━━ 레이아웃 규칙 ━━━
+• 텍스트↔이미지: 같은 수평 행에서 x축 겹침 금지.
+  예) 좌 이미지 x:0 w:370 → 우 텍스트는 x:410 이상
+• 풀폭 텍스트: x:0, width:780 (또는 좌우 패딩 x:40, width:700)
+• 이미지가 섹션 좌측 절반을 채울 때: x:0, width:370, objectFit:"cover"
+• 이미지가 섹션 우측 절반을 채울 때: x:410, width:370, objectFit:"cover"
 
-• hero (height: 1000-1200):
-  - 텍스트 zone: y:40 ~ y:320 (브랜드라벨, 제목, 서브카피, 구분선, 배지)
-  - 이미지 zone: y:340 ~ y:940 (제품 이미지, 키워드 배지 shape는 이미지 아래)
-  - 하단 텍스트 zone: y:960 ~ y:1100 (감성 카피)
+[LAYOUT GRID — 섹션별 안전 영역]
 
-• philosophy (height: 600-750):
-  - 전체 텍스트 zone: y:60 ~ y:650 (세로선 shape + 인용구 + 설명)
+• hero (height: 960-1040):
+  - 상단 텍스트: y:40~220 (브랜드라벨, 제품명, 서브카피)
+  - 이미지: y:220~820 (x:90, w:600, h:600 — 가운데 정렬)
+  - 하단 텍스트: y:840~970 (accent 구분선 + 키포인트 나열 + 별점)
 
-• benefits (height: 1400-1600):
-  - 헤더 zone: y:40 ~ y:160 (라벨 + 제목 + 구분선)
-  - 장점1 zone: y:180 ~ y:620 (좌 이미지 x:40 w:340 / 우 텍스트 x:420 w:320)
-  - 장점2 zone: y:640 ~ y:1080 (좌 텍스트 x:40 w:320 / 우 이미지 x:420 w:340) ← 좌우 반전
-  - 장점3 zone: y:1100 ~ y:1500 (풀폭 카드)
+• philosophy (height: 500-560):
+  - 세로 accent 선: x:60, y:100, w:4, h:220
+  - 인용구: x:90, y:100, w:640
+  - 출처+설명: x:90, y:340
 
-• ingredients (height: 1200-1400):
-  - 헤더 zone: y:40 ~ y:160
-  - 성분1 zone: y:180 ~ y:520 (좌 이미지 x:40 w:220 / 우 텍스트 x:300 w:440)
-  - 성분2 zone: y:540 ~ y:880 (좌 텍스트 x:40 w:440 / 우 이미지 x:520 w:220)
-  - 성분3 zone: y:900 ~ y:1300 (좌 이미지 x:40 w:220 / 우 텍스트 x:300 w:440)
+• benefits (height: 1440-1520):
+  - 헤더: y:40~130
+  - 장점1 (y:150~570): 좌=이미지(x:0, w:370, h:420) / 우=텍스트(x:410, w:340)
+  - 장점2 (y:590~1010): 좌=텍스트(x:40, w:340) / 우=이미지(x:410, w:370, h:420)
+  - 장점3 (y:1030~1450): 좌=이미지(x:0, w:370, h:420) / 우=텍스트(x:410, w:340)
+  ※ 번호는 plain text 13px: "01", "02", "03"
 
-• texture (height: 900-1100):
-  - 이미지 zone: y:0 ~ y:500 (풀폭 이미지)
-  - 텍스트 zone: y:520 ~ y:1000 (라벨 + 제목 + 설명 + 특성)
+• ingredients (height: 1140-1220):
+  - 헤더: y:40~130
+  - 성분1 (y:150~480): 좌=이미지(x:60, w:260, h:300) / 우=텍스트(x:360, w:380)
+  - 성분2 (y:500~830): 좌=텍스트(x:40, w:340) / 우=이미지(x:420, w:260, h:300)
+  - 성분3 (y:850~1180): 좌=이미지(x:60, w:260, h:300) / 우=텍스트(x:360, w:380)
 
-• proof (height: 800-950):
-  - 헤더 zone: y:40 ~ y:160
-  - 수치 그리드 zone: y:180 ~ y:500 (2x2 배열, 좌 x:40 w:340 / 우 x:420 w:340)
-  - 하단 zone: y:520 ~ y:850
+• texture (height: 880-960):
+  - 이미지: y:0~540 (x:0, w:780, h:540, objectFit:"cover")
+  - 텍스트: y:580~900
 
-• howto (height: 1000-1200):
-  - 헤더 zone: y:40 ~ y:160
-  - Step1 zone: y:180 ~ y:480
-  - Step2 zone: y:500 ~ y:800
-  - Step3 zone: y:820 ~ y:1100
+• proof (height: 540-620):
+  - 헤더: y:40~150
+  - 수치 4개 1열 배열: y:180~310 (x:40,w:150 / x:227,w:150 / x:414,w:150 / x:601,w:150)
+    ※ 컬러 박스 배경 없이 — 숫자 자체가 크고(38-42px, fontWeight:800, accent 색) 임팩트 있게
+  - 출처+감성문구: y:330~530
 
-• banner (height: 600-700):
-  - 이미지 zone: y:60 ~ y:400 (가운데 제품 이미지)
-  - 텍스트 zone: y:420 ~ y:650 (카피 + 구분선)
+• howto (height: 840-920):
+  - 헤더: y:40~150
+  - Step 1 (y:170~320): 번호 "01"(48px, fontWeight:100, textLight) + 제목(20px) + 설명(14px)
+  - 수평 구분선: y:338
+  - Step 2 (y:358~508): 동일 구조
+  - 수평 구분선: y:526
+  - Step 3 (y:546~696): 동일 구조
+  - TIP 뱃지: y:748 (shape rect, accentBg, borderRadius:16)
+  ※ circle shape 번호 배지 절대 금지
 
-• reviews (height: 900-1050):
-  - 헤더 zone: y:40 ~ y:160
-  - 리뷰1 zone: y:180 ~ y:440
-  - 리뷰2 zone: y:460 ~ y:720
-  - 리뷰3 zone: y:740 ~ y:980
+• banner (height: 580-640):
+  - 어두운 배경
+  - 이미지: y:30~400 (x: 가운데, w:290, h:370)
+  - 텍스트: y:420~580
 
-• specs (height: 800-950):
-  - 헤더 zone: y:40 ~ y:160
-  - 콘텐츠 zone: y:180 ~ y:750 (좌 이미지 x:40 w:280 / 우 텍스트 x:360 w:380)
-  - 하단 zone: y:770 ~ y:900
+• reviews (height: 860-940):
+  - 헤더: y:40~150
+  - 리뷰카드 3개 (각 x:60, w:660, h:188, borderRadius:12):
+    ● 카드1: y:170 / 카드2: y:378 / 카드3: y:586
+    ● 각 카드: 별점(15px, #F59E0B) + 리뷰(14px, 2줄) + 작성자(12px)
 
-• cta (height: 500-600):
-  - 이미지 zone: y:40 ~ y:280
-  - 텍스트+버튼 zone: y:300 ~ y:550
+• specs (height: 680-760):
+  - 헤더: y:40~150
+  - 좌=제품이미지(x:40, w:270, h:380) / 우=스펙4개(x:360, y:170~, 각 56px 간격)
+  - 인증배지+주의: y:580
+
+• cta (height: 500-560):
+  - 어두운 배경
+  - 이미지: y:20~310 (x:270, w:240, h:290)
+  - 제목+구분선+서브카피+버튼: y:330~530
 
 [제품 정보]
 제품명: ${productName}
@@ -119,122 +129,102 @@ zone 안에서만 해당 타입의 element를 배치합니다.
 • 문제-시간 앵커링: "화장이 무너지는 오후 2시" 같은 구체적 상황 묘사
 • 혜택 번역: 성분명만 쓰지 말고 "~이/가 ~해서 ~한 효과"로 소비자 언어 번역
 • 구체적 숫자: "98%의 사용자가 2주 만에 효과 체감" (합리적으로 생성)
-• 감성 묘사: 사용 순간의 경험을 오감으로 표현 (질감, 향, 느낌)
+• 감성 묘사: 사용 순간의 경험을 오감으로 표현
 • 소셜 프루프: "N만 명이 선택", ★4.9 리뷰 등
 
 [타이포그래피 스케일]
-• 영문 라벨: fontSize 11-13, fontWeight 400, fontFamily "Playfair Display", letterSpacing 3-5, UPPERCASE
-• 히어로 제목: fontSize 40-48, fontWeight 300, fontFamily "Noto Sans KR", lineHeight 1.3
-• 섹션 제목: fontSize 30-36, fontWeight 600, lineHeight 1.3
-• 소제목: fontSize 18-22, fontWeight 600
-• 본문: fontSize 14-16, fontWeight 400, lineHeight 1.7-1.8, color는 muted 톤
-• 캡션/출처: fontSize 11-12, 가장 옅은 색상
+• 영문 라벨: fontSize:11, fontWeight:400, letterSpacing:6, UPPERCASE (소제목 역할)
+• 히어로/섹션 대제목: fontSize:36-44, fontWeight:300-700
+• benefits/ingredients 소제목: fontSize:22-26, fontWeight:700
+• 본문: fontSize:14-15, fontWeight:400, lineHeight:1.85, muted 색상
+• step 번호: fontSize:48, fontWeight:100, textLight (큰 연한 숫자)
 
 [element type 규칙]
 • text: content, x, y, width, height, fontSize, fontWeight, fontFamily, color, textAlign, lineHeight, letterSpacing
-• image: src ("product" | "generate:texture" | "generate:ingredient" | "generate:lifestyle" | "generate:banner"), x, y, width, height, objectFit, borderRadius
-• shape: shapeType ("rect"|"circle"|"line"), x, y, width, height, backgroundColor, borderRadius, opacity
+• image: src ("product" | "generate:texture" | "generate:ingredient" | "generate:lifestyle"), x, y, width, height, objectFit, borderRadius
+• shape: shapeType ("rect"|"line"), x, y, width, height, backgroundColor, borderRadius, opacity
 
-[background 규칙]
-• type: "color" | "gradient"
-• value: hex 색상 또는 CSS linear-gradient()
-• 섹션마다 배경색 교대 (bg / bgAlt / bgDark 순환) — 단조로움 방지
+[background]
+• 섹션마다 bg / bgAlt 교대 (단조로움 방지). banner/cta는 bgDark.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[11개 섹션 — 모두 반드시 포함. 각 섹션마다 5~12개 elements. 적고 큰 것이 좋다]
+[11개 섹션 — 모두 포함. 5~10 elements per section]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. hero (height: 1000-1200)
-   ⚠ 텍스트 zone(y:40~320)과 이미지 zone(y:340~940)을 절대 섞지 마세요.
-   필수 elements:
-   - [y:40~320] 영문 브랜드 라벨 (12px, x:40, width:700, 가운데, letterSpacing 5, Playfair Display)
-   - [y:40~320] 한글 제품명 대제목 (42-48px, fontWeight 300, x:40, width:700, 가운데)
-   - [y:40~320] 서브카피 1줄 (16px, muted 색상, x:40, width:700)
-   - [y:40~320] 구분선 shape (line, x:340, width 100, height 2, accent 색)
-   - [y:40~320] 평점 배지 (shape rect 배경 + text "★★★★★ 4.9 (N,NNN 리뷰)")
-   - [y:340~940] 제품 이미지 src="product" (가운데, width 450-500, height 550)
-   - [y:960~1100] 하단 감성 카피 (20-24px, fontWeight 300, x:40, width:700)
+섹션 상세 가이드:
 
-2. philosophy (height: 600-750)
-   - 좌측 accent 세로선 (shape rect, x:60, width 4, height 120)
-   - 인용구 텍스트 (22-26px, fontWeight 300, lineHeight 1.8, x:100, width:600, 2줄)
-   - 출처 라벨 (13px, Playfair Display italic, x:100, width:600)
-   - 브랜드 설명 본문 (15px, muted, x:40, width:700)
-   - 장식 원형 (shape circle, accent 색, opacity 0.1)
+1. hero (height: 1000): 제품 사진이 주인공
+   - 영문 브랜드 라벨 (11px, y:44, letterSpacing:8, muted, center)
+   - 제품명 대제목 (44px, fontWeight:300, y:74, center)
+   - 서브카피 1줄 (15px, y:174, muted, center)
+   - 제품 이미지 src="product" (x:90, y:220, w:600, h:600)
+   - 구분선 (x:310, y:844, w:160, h:1, accent)
+   - 키포인트 나열 "KP1 · KP2 · KP3" (13px, y:862, muted, center)
+   - 별점 "★★★★★ 4.9 | 리뷰 N개" (13px, y:904, accent, center)
 
-3. benefits (height: 1400-1600)
-   ⚠ 좌우 배치 시 좌측 x:40 w:340, 우측 x:420 w:320. 절대 x축 겹침 금지.
-   - [y:40~160] "KEY BENEFITS" 영문 라벨 + 한글 제목 + 구분선
-   - 장점 3개 (좌우 교차 레이아웃):
-     ● [y:180~620] 장점1: 좌=이미지(src="generate:lifestyle", x:40, w:340, h:380) + 우=텍스트(x:420, w:320): 번호뱃지+제목(20px bold)+설명(15px, 3줄)
-     ● [y:640~1080] 장점2: 좌=텍스트(x:40, w:320) + 우=이미지(src="generate:ingredient", x:420, w:340, h:380) ← 좌우 반전
-     ● [y:1100~1500] 장점3: 풀폭 카드(shape rect x:40, w:700, borderRadius 20) + 번호뱃지 + 제목 + 설명
-   - 핵심 소구 "${keyPoints[0]}", "${keyPoints[1]}", "${keyPoints[2]}" 기반 구체적 카피
+2. philosophy (height: 520): 에디토리얼 인용구
+   - 좌측 세로선 (shape rect, x:60, y:100, w:4, h:220, accent)
+   - 인용구 (22px, fontWeight:300, lineHeight:1.85, x:90, y:100, w:640)
+   - 출처 (12px, Playfair Display, x:90, y:332, w:300, muted)
+   - 브랜드 설명 (14px, x:90, y:380, w:610, muted, lineHeight:1.85)
 
-4. ingredients (height: 1200-1400)
-   ⚠ 이미지와 텍스트를 좌우로 분리. 같은 행에서 x축 겹침 금지.
-   - [y:40~160] "KEY INGREDIENTS" 영문 라벨 + 한글 제목 + 구분선
-   - 성분 3개, 좌우 교차:
-     ● [y:180~520] 성분1: 좌=이미지(x:40, w:220, h:260) + 우=텍스트(x:300, w:440): 성분명+구분선+설명+수치뱃지
-     ● [y:540~880] 성분2: 좌=텍스트(x:40, w:440) + 우=이미지(x:520, w:220, h:260) ← 반전
-     ● [y:900~1300] 성분3: 좌=이미지(x:40, w:220, h:260) + 우=텍스트(x:300, w:440)
+3. benefits (height: 1480): 풀블리드 좌우 교차
+   - 헤더: 영문라벨(y:46) + 대제목(y:76)
+   - 장점1: 이미지(x:0, y:150, w:370, h:420, cover) + 번호"01"(13px,x:410,y:248,accent) + 제목(24px,x:410,y:282,bold) + 설명(14px,x:410,y:358,muted)
+   - 장점2: 번호"02"(x:40,y:688) + 제목(x:40,y:722) + 설명(x:40,y:798) + 이미지(x:410, y:590, w:370, h:420, cover)
+   - 장점3: 이미지(x:0,y:1030,w:370,h:420,cover) + 번호"03"(x:410,y:1128) + 제목(x:410,y:1162) + 설명(x:410,y:1238)
+   ★ 이미지 x:0이나 x:410, 텍스트 x:40이나 x:410 — x축 겹침 절대 금지
+   ★ 원형 번호 배지(circle shape) 사용 금지
 
-5. texture (height: 900-1100)
-   ⚠ 이미지는 상단, 텍스트는 하단. y축에서 완전 분리.
-   - [y:0~500] 풀폭 이미지 src="generate:texture" (x:0, width 780, height 500, objectFit "cover")
-   - [y:520~1000] "TEXTURE" 영문 라벨 + 한글 제목 (28-32px) + 구분선
-   - [y:520~1000] 텍스처 설명 본문 (16px, x:40, width:700, 가운데, 3줄)
-   - [y:520~1000] 특성 3개 가로 배열 (각각 w:220, x:40/x:280/x:520 — 겹침 없이)
+4. ingredients (height: 1180): 좌우 교차 성분 카드
+   - 헤더: 영문라벨(y:46) + 대제목(y:76)
+   - 성분1: 이미지(x:60,y:158,w:260,h:300,cover) + 성분명(21px,x:360,y:178) + accent선(x:360,y:222,w:60) + 설명(14px,x:360,y:238)
+   - 성분2: 성분명(x:40,y:530) + accent선(x:40,y:574) + 설명(x:40,y:590) + 이미지(x:420,y:510,w:260,h:300,cover)
+   - 성분3: 이미지(x:60,y:878,w:260,h:300,cover) + 성분명(x:360,y:898) + accent선(x:360,y:942) + 설명(x:360,y:958)
 
-6. proof (height: 800-950)
-   ⚠ 수치 그리드는 2x2 배치: 좌 x:40 w:340, 우 x:420 w:340. 겹침 금지.
-   - [y:40~160] "CLINICAL RESULTS" 영문 라벨 + 한글 제목 + 구분선
-   - [y:180~500] 수치 4개 그리드 (2x2):
-     ● 상단좌(x:40, y:180, w:340) + 상단우(x:420, y:180, w:340)
-     ● 하단좌(x:40, y:350, w:340) + 하단우(x:420, y:350, w:340)
-     ● 각각 shape rect 배경(borderRadius 16) + 큰 숫자(36px, fontWeight 800, accent 색) + 설명(13px)
-   - [y:520~700] 출처 텍스트 (11px, 가장 옅은 색)
-   - [y:520~850] "BEFORE & AFTER" 라벨 + 카드 2개 (좌 x:40 w:340, 우 x:420 w:340)
+5. texture (height: 920): 풀블리드 매크로 이미지
+   - 이미지 src="generate:texture" (x:0, y:0, w:780, h:540, cover)
+   - 영문라벨(y:592) + 대제목(y:622) + 구분선(y:692) + 설명(y:712) + 특성3개(y:836)
 
-7. howto (height: 1000-1200)
-   ⚠ 각 Step 카드를 y축으로 완전 분리. 카드끼리 겹침 금지.
-   - [y:40~160] "HOW TO USE" 영문 라벨 + 한글 제목 + 구분선
-   - 3단계 카드 (각 카드 x:40, w:700):
-     ● [y:180~480] Step1: 카드 배경(shape rect, borderRadius 16) + 번호뱃지 + "STEP 1" 라벨 + 제목 + 설명
-     ● [y:500~800] Step2: 카드 배경 + 번호뱃지 + "STEP 2" 라벨 + 제목 + 설명
-     ● [y:820~1100] Step3: 카드 배경 + 번호뱃지 + "STEP 3" 라벨 + 제목 + 설명
-   - 하단 TIP 뱃지 (shape rect, borderRadius 30, accent 배경)
+6. proof (height: 580): 큰 숫자, 컬러 박스 없음
+   - 헤더(y:44,y:74) + 구분선(y:146)
+   - 수치4개: x:40/x:227/x:414/x:601, 각 w:150
+     큰숫자(40px, fontWeight:800, accent, y:190) + 라벨(13px, muted, y:268)
+   - 출처(11px, y:340) + 감성문구(16px, y:390)
 
-8. banner (height: 600-700)
-   ⚠ 이미지 영역과 텍스트 영역 y축 분리.
-   - 어두운 배경
-   - [y:60~400] 제품 이미지 src="product" (x: 가운데, width 280, height 320)
-   - [y:420~650] 감성 카피 (28px, fontWeight 300, 밝은 색, x:40, width:700)
-   - [y:420~650] 구분선 + 서브카피
-   - 장식 원형 (shape circle, opacity 0.08-0.1, 2개 — 배경 장식이므로 겹침 허용)
+7. howto (height: 880): 에디토리얼 스텝
+   - 헤더(y:44,y:74) + 구분선(y:146)
+   - Step1: 큰번호"01"(48px,fontWeight:100,textLight, x:60,y:178) + 제목(20px,x:150,y:192) + 설명(14px,x:150,y:240)
+   - 구분선(y:336, x:60, w:660, opacity:0.25, textLight)
+   - Step2: "02"(x:60,y:366) + 제목(x:150,y:380) + 설명(x:150,y:428)
+   - 구분선(y:524)
+   - Step3: "03"(x:60,y:554) + 제목(x:150,y:568) + 설명(x:150,y:616)
+   - TIP: shape rect(x:60,y:748,w:660,h:60,accentBg,borderRadius:16) + text(13px,accent,center)
 
-9. reviews (height: 900-1050)
-   ⚠ 리뷰 카드 3개는 y축으로 완전 분리. 카드끼리 겹침 금지.
-   - [y:40~160] "REAL REVIEWS" 영문 라벨 + 한글 제목 + 구분선
-   - 리뷰 카드 3개 (각 카드 x:40, w:700, borderRadius 16):
-     ● [y:180~440] 리뷰1: 카드 배경 + 별점(16px, 금색 #F59E0B) + 리뷰 내용(14px, 3줄) + 작성자(12px, muted)
-     ● [y:460~720] 리뷰2: 동일 구조
-     ● [y:740~980] 리뷰3: 동일 구조
+8. banner (height: 600): 어두운 감성 배너
+   - 이미지 src="product" (x:245, y:30, w:290, h:370)
+   - 감성카피(28px, fontWeight:300, y:438, 밝은 색)
+   - 구분선(y:504) + 서브카피(y:524, muted)
 
-10. specs (height: 800-950)
-    ⚠ 좌측 이미지와 우측 텍스트 x축 겹침 금지.
-    - [y:40~160] "PRODUCT INFO" 영문 라벨 + 한글 제목 + 구분선
-    - [y:180~750] 좌: 제품 이미지 src="product" (x:40, w:280, h:400)
-    - [y:180~750] 우: 스펙 테이블 (x:360, w:380 — shape rect 배경 + 항목 5개)
-    - [y:770~900] 인증 뱃지 (x:40, width:700) + 주의사항 (11px)
+9. reviews (height: 900): 클린 리뷰 카드
+   - 헤더(y:44,y:74) + 구분선(y:146)
+   - 카드3개 (x:60, w:660, h:188, borderRadius:12):
+     카드1(y:170) 카드2(y:378) 카드3(y:586)
+     각 카드: 별점(15px,#F59E0B,y+20) + 리뷰(14px,y+54,2줄) + 작성자(12px,y+150,muted)
 
-11. cta (height: 500-600)
-    ⚠ 이미지 영역과 텍스트+버튼 영역 y축 분리.
+10. specs (height: 720): 제품 스펙
+    - 헤더(y:44,y:74) + 구분선(y:146)
+    - 제품이미지 src="product"(x:40,y:172,w:270,h:380)
+    - 스펙4개 우측(x:360~740): 제품명/용량/제조국/사용기한, 각 y:196+i*56
+      label(12px,x:360,w:100,bold,muted) + value(13px,x:468,w:272)
+    - 인증배지(12px,y:596,muted,center) + 주의(11px,y:640,textLight,center)
+
+11. cta (height: 520): 구매 유도
     - 어두운 배경
-    - [y:40~280] 제품 이미지 src="product" (x: 가운데, width 200, height 220)
-    - [y:300~550] CTA 제목 (30px, fontWeight 600, 밝은 색, x:40, width:700)
-    - [y:300~550] 구분선 + 서브카피
-    - [y:300~550] CTA 버튼 모양 (shape rect, borderRadius 26, accent 색, x: 가운데, width 300 + text "구매하러 가기 →" 흰색)
+    - 이미지 src="product"(x:270, y:20, w:240, h:290)
+    - CTA제목(32px,fontWeight:600,y:330,밝은색)
+    - 구분선(y:398) + 서브카피(y:418,muted)
+    - 버튼: shape rect(x:265,y:470,w:250,h:48,accent,borderRadius:24) + text "구매하러 가기 →"(14px,#FFF,center)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
