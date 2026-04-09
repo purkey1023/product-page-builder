@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload, Palette, Undo2, Redo2 } from 'lucide-react'
+import { ArrowLeft, Download, Save, Loader2, Type, ImageIcon, Square, Plus, Upload, Palette, Undo2, Redo2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useEditorStore } from '@/store/editorStore'
 import { saveProject } from '@/lib/supabase/projects'
@@ -28,6 +28,7 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
   const addShapeElement = useEditorStore((s) => s.addShapeElement)
   const [exportOpen, setExportOpen] = useState(false)
   const [showShapeMenu, setShowShapeMenu] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
   const [showImageMenu, setShowImageMenu] = useState(false)
   const [conceptOpen, setConceptOpen] = useState(false)
   const imageFileRef = useRef<HTMLInputElement>(null)
@@ -42,6 +43,48 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
       console.error('[manualSave]', e)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleRegenerate = async () => {
+    if (!project || isRegenerating) return
+    if (!confirm('전체 섹션을 AI로 다시 생성합니다.\n현재 편집 내용이 모두 사라집니다.\n계속하시겠습니까?')) return
+
+    setIsRegenerating(true)
+    try {
+      const { name, category, mood, keyPoints } = project.product
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productName: name, category, mood, keyPoints }),
+      })
+
+      if (!res.ok) throw new Error('생성 실패')
+      const data = await res.json()
+
+      if (data.sections?.length) {
+        const { buildSectionsFromGenerated } = await import('@/lib/sections')
+        let newSections = buildSectionsFromGenerated(data.sections, mood)
+
+        // 기존 이미지 보존 (product URL)
+        const productUrl = project.product.imageUrl
+        for (const sec of newSections) {
+          for (const el of sec.elements) {
+            if (el.type === 'image' && (el as import('@/types').ImageElement).src === 'product' && productUrl) {
+              (el as import('@/types').ImageElement).src = productUrl
+            }
+          }
+        }
+
+        const setProject = useEditorStore.getState().setProject
+        setProject({ ...project, sections: newSections, updatedAt: new Date().toISOString() })
+        await saveProject({ ...project, sections: newSections })
+      }
+    } catch (err) {
+      console.error('[Regenerate]', err)
+      alert('재생성 실패. 다시 시도해주세요.')
+    } finally {
+      setIsRegenerating(false)
     }
   }
 
@@ -177,6 +220,15 @@ export function EditorHeader({ sectionRefs }: EditorHeaderProps) {
         <div className="flex-1" />
 
         {/* 우측 액션 */}
+        <button
+          onClick={handleRegenerate}
+          disabled={isRegenerating}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 disabled:opacity-50 transition-all"
+          title="전체 재생성"
+        >
+          {isRegenerating ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          {isRegenerating ? '생성 중...' : '재생성'}
+        </button>
         <button
           onClick={() => setConceptOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 transition-all"
